@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import electron from 'electron';
 import SystemStreamEmitter from '../SystemStreamEmitter';
 import StreamEmitter from '../StreamEmitter';

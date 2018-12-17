@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import electron from 'electron';
-import React from 'react';
+import * as React from 'react';
 import ReactDOM from 'react-dom';
 import escapeHTML from 'escape-html';
 import IssueEmitter from '../IssueEmitter';

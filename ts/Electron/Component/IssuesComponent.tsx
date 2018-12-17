@@ -1,5 +1,5 @@
 import electron from 'electron';
-import React from 'react';
+import * as React from 'react';
 import ReactDOM from 'react-dom';
 import moment from 'moment';
 import SystemStreamEmitter from '../SystemStreamEmitter';

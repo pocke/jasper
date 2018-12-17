@@ -1,5 +1,5 @@
 import electron from 'electron';
-import React from 'react';
+import * as React from 'react';
 import os from 'os';
 import StreamEmitter from '../StreamEmitter';
 import SystemStreamEmitter from '../SystemStreamEmitter';
