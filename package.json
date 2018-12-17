@@ -42,6 +42,7 @@
     "esdoc": "latest",
     "esdoc-jsx-plugin": "latest",
     "esdoc-standard-plugin": "latest",
+    "prettier": "^1.15.3",
     "typescript": "^3.2.2"
   },
   "keywords": [],
