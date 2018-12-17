@@ -1,46 +1,47 @@
-import Logger from "color-logger";
-import fs from "fs-extra";
-import electron from "electron";
-import Config from "./Config";
-import File from "./Util/File";
-import Platform from "./Util/Platform";
-import BrowserViewProxy from "./BrowserViewProxy";
+import Logger from 'color-logger';
+import fs from 'fs-extra';
+import Electron from 'electron';
+import Config from './Config';
+import File from './Util/File';
+import Platform from './Util/Platform';
+import BrowserViewProxy from './BrowserViewProxy';
+import {Preference} from './Types/Preferences';
 
-const app = electron.app;
-const Menu = electron.Menu;
-const powerSaveBlocker = electron.powerSaveBlocker;
-const ipcMain = electron.ipcMain;
-const BrowserView = electron.BrowserView;
+const app = Electron.app;
+const Menu = Electron.Menu;
+const powerSaveBlocker = Electron.powerSaveBlocker;
+const ipcMain = Electron.ipcMain;
+const BrowserView = Electron.BrowserView;
 
 // mac(no sign): ~/Library/Application Support/jasper
 // mac(sign)   : ~/Library/Containers/io.jasperapp/data/Library/Application Support/jasper
 // win         : ~\AppData\Roaming\jasper
-const userDataPath = app.getPath("userData");
+const userDataPath = app.getPath('userData');
 const configDir = `${userDataPath}/io.jasperapp`;
 const configPath = `${configDir}/config.json`;
 
 Logger.n(`user data path: ${userDataPath}`);
-Logger.n(`app data path: ${app.getPath("appData")}`);
+Logger.n(`app data path: ${app.getPath('appData')}`);
 Logger.n(`config path: ${configPath}`);
 
-powerSaveBlocker.start("prevent-app-suspension");
+powerSaveBlocker.start('prevent-app-suspension');
 
-process.on("unhandledRejection", (reason, p) => {
+process.on('unhandledRejection', (reason, p) => {
   Logger.e(`Unhandled Rejection at: ${p}`);
   Logger.e(`reason: ${reason}`);
 });
 
 let mainWindowPromiseResolver;
 const mainWindowPromise = new Promise(
-  _resolve => (mainWindowPromiseResolver = _resolve)
+  _resolve => (mainWindowPromiseResolver = _resolve),
 );
 
-let mainWindow = null;
-let appMenu = null;
-let minimumMenu = null;
-electron.app.on("window-all-closed", async () => {
-  await require("./Util/GA").default.eventAppEnd("app", "end");
-  electron.app.quit();
+let mainWindow: Electron.BrowserWindow | null = null;
+let appMenu: Electron.Menu | null = null;
+let minimumMenu: Electron.Menu | null = null;
+Electron.app.on('window-all-closed', async () => {
+  await require('./Util/GA').default.eventAppEnd('app', 'end');
+  Electron.app.quit();
 });
 
 let skipReadIssue = 0;
@@ -48,49 +49,49 @@ let currentZoom = 1;
 
 // handle that open with custom URL schema.
 // jasperapp://stream?name=...&queries=...&color=...&notification=...
-electron.app.on("will-finish-launching", () => {
-  app.on("open-url", async (e, url) => {
+Electron.app.on('will-finish-launching', () => {
+  app.on('open-url', async (e, url) => {
     e.preventDefault();
-    const urlObj = require("url").parse(url, true);
+    const urlObj = require('url').parse(url, true);
 
-    if (urlObj.host === "stream") {
+    if (urlObj.host === 'stream') {
       const stream = {
-        name: urlObj.query.name || "",
-        queries: urlObj.query.queries || "[]",
+        name: urlObj.query.name || '',
+        queries: urlObj.query.queries || '[]',
         notification: parseInt(urlObj.query.notification, 10),
-        color: urlObj.query.color || ""
+        color: urlObj.query.color || '',
       };
 
       if (mainWindow) {
-        mainWindow.webContents.send("create-new-stream", stream);
+        mainWindow.webContents.send('create-new-stream', stream);
       } else {
         await mainWindowPromise;
-        mainWindow.webContents.send("create-new-stream", stream);
+        mainWindow.webContents.send('create-new-stream', stream);
       }
     }
   });
 });
 
-electron.app.on("ready", function() {
-  const config = { width: 1280, height: 900, title: "Jasper" };
+Electron.app.on('ready', function() {
+  const config = {width: 1280, height: 900, title: 'Jasper'};
   if (Platform.isLinux()) config.icon = `${__dirname}/Electron/image/icon.png`;
-  global.mainWindow = mainWindow = new electron.BrowserWindow(config);
+  global.mainWindow = mainWindow = new Electron.BrowserWindow(config);
 
-  mainWindow.on("closed", () => {
+  mainWindow.on('closed', () => {
     mainWindow = null;
   });
 
   // prevent external web page
-  mainWindow.webContents.on("will-navigate", (ev, url) => ev.preventDefault());
+  mainWindow.webContents.on('will-navigate', (ev, url) => ev.preventDefault());
 
   // power save handling
   {
-    electron.powerMonitor.on("suspend", () => {
+    Electron.powerMonitor.on('suspend', () => {
       Logger.n(`power monitor: suspend`);
       // do nothing
     });
 
-    electron.powerMonitor.on("resume", () => {
+    Electron.powerMonitor.on('resume', () => {
       Logger.n(`power monitor: resume`);
       restartAllStreams();
     });
@@ -98,14 +99,14 @@ electron.app.on("ready", function() {
 
   // online/offline
   {
-    ipcMain.on("online-status-changed", (event, status) => {
+    ipcMain.on('online-status-changed', (event, status) => {
       Logger.n(`network status: ${status}`);
-      if (status === "offline") {
+      if (status === 'offline') {
         stopAllStreams();
-        require("./Util/GA").default.setNetworkAvailable(false);
+        require('./Util/GA').default.setNetworkAvailable(false);
       } else {
         restartAllStreams();
-        require("./Util/GA").default.setNetworkAvailable(true);
+        require('./Util/GA').default.setNetworkAvailable(true);
       }
     });
   }
@@ -113,517 +114,517 @@ electron.app.on("ready", function() {
   // Create the Application's main menu
   const template = [
     {
-      label: "Application",
+      label: 'Application',
       submenu: [
-        { label: "About Jasper", click: showAbout },
-        { type: "separator" },
+        {label: 'About Jasper', click: showAbout},
+        {type: 'separator'},
         {
-          label: "Preferences",
-          accelerator: "CmdOrCtrl+,",
-          click: showPreferences
+          label: 'Preferences',
+          accelerator: 'CmdOrCtrl+,',
+          click: showPreferences,
         },
         {
-          label: "Update",
+          label: 'Update',
           click: () => {
-            electron.shell.openExternal("https://jasperapp.io/release.html");
-          }
+            Electron.shell.openExternal('https://jasperapp.io/release.html');
+          },
         },
-        { type: "separator" },
-        { label: "Services", role: "services" },
-        { type: "separator" },
-        { label: "Hide Jasper", accelerator: "CmdOrCtrl+H", role: "hide" },
+        {type: 'separator'},
+        {label: 'Services', role: 'services'},
+        {type: 'separator'},
+        {label: 'Hide Jasper', accelerator: 'CmdOrCtrl+H', role: 'hide'},
         {
-          label: "Hide Others",
-          accelerator: "Option+CmdOrCtrl+H",
-          role: "hideothers"
+          label: 'Hide Others',
+          accelerator: 'Option+CmdOrCtrl+H',
+          role: 'hideothers',
         },
-        { label: "Show All", role: "unhide" },
-        { type: "separator" },
-        { label: "Quit Jasper", accelerator: "CmdOrCtrl+Q", click: quit }
-      ]
+        {label: 'Show All', role: 'unhide'},
+        {type: 'separator'},
+        {label: 'Quit Jasper', accelerator: 'CmdOrCtrl+Q', click: quit},
+      ],
     },
     {
-      label: "Edit",
+      label: 'Edit',
       submenu: [
-        { label: "Undo", accelerator: "CmdOrCtrl+Z", role: "undo" },
-        { label: "Redo", accelerator: "Shift+CmdOrCtrl+Z", role: "redo" },
-        { type: "separator" },
-        { label: "Cut", accelerator: "CmdOrCtrl+X", role: "cut" },
-        { label: "Copy", accelerator: "CmdOrCtrl+C", role: "copy" },
-        { label: "Paste", accelerator: "CmdOrCtrl+V", role: "paste" },
-        { label: "Select All", accelerator: "CmdOrCtrl+A", role: "selectall" }
-      ]
+        {label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo'},
+        {label: 'Redo', accelerator: 'Shift+CmdOrCtrl+Z', role: 'redo'},
+        {type: 'separator'},
+        {label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut'},
+        {label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy'},
+        {label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste'},
+        {label: 'Select All', accelerator: 'CmdOrCtrl+A', role: 'selectall'},
+      ],
     },
     {
-      label: "View",
+      label: 'View',
       submenu: [
         {
-          label: "Single Pane",
-          accelerator: "CmdOrCtrl+1",
-          click: switchLayout.bind(null, "single")
+          label: 'Single Pane',
+          accelerator: 'CmdOrCtrl+1',
+          click: switchLayout.bind(null, 'single'),
         },
         {
-          label: "Two Pane",
-          accelerator: "CmdOrCtrl+2",
-          click: switchLayout.bind(null, "two")
+          label: 'Two Pane',
+          accelerator: 'CmdOrCtrl+2',
+          click: switchLayout.bind(null, 'two'),
         },
         {
-          label: "Three Pane",
-          accelerator: "CmdOrCtrl+3",
-          click: switchLayout.bind(null, "three")
+          label: 'Three Pane',
+          accelerator: 'CmdOrCtrl+3',
+          click: switchLayout.bind(null, 'three'),
         },
-        { type: "separator" },
-        { label: "Full Screen", role: "togglefullscreen" }
-      ]
+        {type: 'separator'},
+        {label: 'Full Screen', role: 'togglefullscreen'},
+      ],
     },
     {
-      label: "Streams",
+      label: 'Streams',
       submenu: [
         {
-          label: "Next Stream",
-          accelerator: "D",
-          click: commandWebContents.bind(null, "app", "next_stream")
+          label: 'Next Stream',
+          accelerator: 'D',
+          click: commandWebContents.bind(null, 'app', 'next_stream'),
         },
         {
-          label: "Prev Stream",
-          accelerator: "F",
-          click: commandWebContents.bind(null, "app", "prev_stream")
+          label: 'Prev Stream',
+          accelerator: 'F',
+          click: commandWebContents.bind(null, 'app', 'prev_stream'),
         },
-        { type: "separator" },
+        {type: 'separator'},
         {
-          label: "LIBRARY",
+          label: 'LIBRARY',
           submenu: [
             {
-              label: "Inbox",
-              accelerator: "F1",
-              click: commandWebContents.bind(null, "app", "load_inbox")
+              label: 'Inbox',
+              accelerator: 'F1',
+              click: commandWebContents.bind(null, 'app', 'load_inbox'),
             },
             {
-              label: "Unread",
-              accelerator: "F2",
-              click: commandWebContents.bind(null, "app", "load_unread")
+              label: 'Unread',
+              accelerator: 'F2',
+              click: commandWebContents.bind(null, 'app', 'load_unread'),
             },
             {
-              label: "Open",
-              accelerator: "F3",
-              click: commandWebContents.bind(null, "app", "load_open")
+              label: 'Open',
+              accelerator: 'F3',
+              click: commandWebContents.bind(null, 'app', 'load_open'),
             },
             {
-              label: "Star",
-              accelerator: "F4",
-              click: commandWebContents.bind(null, "app", "load_mark")
+              label: 'Star',
+              accelerator: 'F4',
+              click: commandWebContents.bind(null, 'app', 'load_mark'),
             },
             {
-              label: "Archive",
-              accelerator: "F5",
-              click: commandWebContents.bind(null, "app", "load_archive")
-            }
-          ]
+              label: 'Archive',
+              accelerator: 'F5',
+              click: commandWebContents.bind(null, 'app', 'load_archive'),
+            },
+          ],
         },
         {
-          label: "SYSTEM",
+          label: 'SYSTEM',
           submenu: [
             {
-              label: "Me",
-              accelerator: "F6",
-              click: commandWebContents.bind(null, "app", "load_me")
+              label: 'Me',
+              accelerator: 'F6',
+              click: commandWebContents.bind(null, 'app', 'load_me'),
             },
             {
-              label: "Team",
-              accelerator: "F7",
-              click: commandWebContents.bind(null, "app", "load_team")
+              label: 'Team',
+              accelerator: 'F7',
+              click: commandWebContents.bind(null, 'app', 'load_team'),
             },
             {
-              label: "Watching",
-              accelerator: "F8",
-              click: commandWebContents.bind(null, "app", "load_watching")
+              label: 'Watching',
+              accelerator: 'F8',
+              click: commandWebContents.bind(null, 'app', 'load_watching'),
             },
             {
-              label: "Subscription",
-              accelerator: "F9",
-              click: commandWebContents.bind(null, "app", "load_subscription")
-            }
-          ]
+              label: 'Subscription',
+              accelerator: 'F9',
+              click: commandWebContents.bind(null, 'app', 'load_subscription'),
+            },
+          ],
         },
         {
-          label: "STREAMS",
+          label: 'STREAMS',
           submenu: [
             {
-              label: "1st",
-              accelerator: "1",
-              click: commandWebContents.bind(null, "app", "load_1st")
+              label: '1st',
+              accelerator: '1',
+              click: commandWebContents.bind(null, 'app', 'load_1st'),
             },
             {
-              label: "2nd",
-              accelerator: "2",
-              click: commandWebContents.bind(null, "app", "load_2nd")
+              label: '2nd',
+              accelerator: '2',
+              click: commandWebContents.bind(null, 'app', 'load_2nd'),
             },
             {
-              label: "3rd",
-              accelerator: "3",
-              click: commandWebContents.bind(null, "app", "load_3rd")
+              label: '3rd',
+              accelerator: '3',
+              click: commandWebContents.bind(null, 'app', 'load_3rd'),
             },
             {
-              label: "4th",
-              accelerator: "4",
-              click: commandWebContents.bind(null, "app", "load_4th")
+              label: '4th',
+              accelerator: '4',
+              click: commandWebContents.bind(null, 'app', 'load_4th'),
             },
             {
-              label: "5th",
-              accelerator: "5",
-              click: commandWebContents.bind(null, "app", "load_5th")
-            }
-          ]
+              label: '5th',
+              accelerator: '5',
+              click: commandWebContents.bind(null, 'app', 'load_5th'),
+            },
+          ],
         },
-        { type: "separator" },
+        {type: 'separator'},
         {
-          label: "Restart Streams",
-          accelerator: "Alt+L",
-          click: restartAllStreams
-        }
-      ]
+          label: 'Restart Streams',
+          accelerator: 'Alt+L',
+          click: restartAllStreams,
+        },
+      ],
     },
     {
-      label: "Issues",
+      label: 'Issues',
       submenu: [
         {
-          label: "Load Issues",
-          accelerator: ".",
-          click: commandWebContents.bind(null, "issues", "load")
+          label: 'Load Issues',
+          accelerator: '.',
+          click: commandWebContents.bind(null, 'issues', 'load'),
         },
-        { type: "separator" },
+        {type: 'separator'},
         {
-          label: "Next Issue",
-          accelerator: "J",
-          click: commandWebContents.bind(null, "issues", "next")
-        },
-        {
-          label: "Prev Issue",
-          accelerator: "K",
-          click: commandWebContents.bind(null, "issues", "prev")
+          label: 'Next Issue',
+          accelerator: 'J',
+          click: commandWebContents.bind(null, 'issues', 'next'),
         },
         {
-          label: "Skip Read(On/Off)",
-          accelerator: "Y",
-          type: "checkbox",
+          label: 'Prev Issue',
+          accelerator: 'K',
+          click: commandWebContents.bind(null, 'issues', 'prev'),
+        },
+        {
+          label: 'Skip Read(On/Off)',
+          accelerator: 'Y',
+          type: 'checkbox',
           click: () => {
             skipReadIssue ^= 1;
-          }
+          },
         },
-        { type: "separator" },
+        {type: 'separator'},
         {
-          label: "Toggle",
+          label: 'Toggle',
           submenu: [
             {
-              label: "Read",
-              accelerator: "I",
-              click: commandWebContents.bind(null, "webview", "read")
+              label: 'Read',
+              accelerator: 'I',
+              click: commandWebContents.bind(null, 'webview', 'read'),
             },
             {
-              label: "Star",
-              accelerator: "S",
-              click: commandWebContents.bind(null, "webview", "mark")
+              label: 'Star',
+              accelerator: 'S',
+              click: commandWebContents.bind(null, 'webview', 'mark'),
             },
             {
-              label: "Archive",
-              accelerator: "E",
-              click: commandWebContents.bind(null, "webview", "archive")
-            }
-          ]
+              label: 'Archive',
+              accelerator: 'E',
+              click: commandWebContents.bind(null, 'webview', 'archive'),
+            },
+          ],
         },
-        { type: "separator" },
+        {type: 'separator'},
         {
-          label: "Filter",
+          label: 'Filter',
           submenu: [
             {
-              label: "Focus On",
-              accelerator: "/",
-              click: commandWebContents.bind(null, "issues", "focus_filter")
+              label: 'Focus On',
+              accelerator: '/',
+              click: commandWebContents.bind(null, 'issues', 'focus_filter'),
             },
             {
-              label: "Author",
-              accelerator: "A",
-              click: commandWebContents.bind(null, "issues", "filter_author")
+              label: 'Author',
+              accelerator: 'A',
+              click: commandWebContents.bind(null, 'issues', 'filter_author'),
             },
             {
-              label: "Assignee",
-              accelerator: "N",
-              click: commandWebContents.bind(null, "issues", "filter_assignee")
+              label: 'Assignee',
+              accelerator: 'N',
+              click: commandWebContents.bind(null, 'issues', 'filter_assignee'),
             },
             {
-              label: "Unread",
-              accelerator: "U",
-              click: commandWebContents.bind(null, "issues", "filter_unread")
+              label: 'Unread',
+              accelerator: 'U',
+              click: commandWebContents.bind(null, 'issues', 'filter_unread'),
             },
             {
-              label: "Open",
-              accelerator: "O",
-              click: commandWebContents.bind(null, "issues", "filter_open")
+              label: 'Open',
+              accelerator: 'O',
+              click: commandWebContents.bind(null, 'issues', 'filter_open'),
             },
             {
-              label: "Star",
-              accelerator: "M",
-              click: commandWebContents.bind(null, "issues", "filter_mark")
+              label: 'Star',
+              accelerator: 'M',
+              click: commandWebContents.bind(null, 'issues', 'filter_mark'),
             },
             {
-              label: "Clear",
-              accelerator: "C",
-              click: commandWebContents.bind(null, "issues", "filter_clear")
-            }
-          ]
+              label: 'Clear',
+              accelerator: 'C',
+              click: commandWebContents.bind(null, 'issues', 'filter_clear'),
+            },
+          ],
         },
-        { type: "separator" },
+        {type: 'separator'},
         {
-          label: "Open with External",
-          accelerator: "CmdOrCtrl+O",
-          click: commandWebContents.bind(null, "webview", "export")
-        }
-      ]
+          label: 'Open with External',
+          accelerator: 'CmdOrCtrl+O',
+          click: commandWebContents.bind(null, 'webview', 'export'),
+        },
+      ],
     },
     {
-      label: "Page",
+      label: 'Page',
       submenu: [
         {
-          label: "Reload",
-          accelerator: "CmdOrCtrl+R",
-          click: commandWebContents.bind(null, "webview", "reload")
+          label: 'Reload',
+          accelerator: 'CmdOrCtrl+R',
+          click: commandWebContents.bind(null, 'webview', 'reload'),
         },
         {
-          label: "Back",
-          accelerator: "CmdOrCtrl+[",
-          click: commandWebContents.bind(null, "webview", "back")
+          label: 'Back',
+          accelerator: 'CmdOrCtrl+[',
+          click: commandWebContents.bind(null, 'webview', 'back'),
         },
         {
-          label: "Forward",
-          accelerator: "CmdOrCtrl+]",
-          click: commandWebContents.bind(null, "webview", "forward")
+          label: 'Forward',
+          accelerator: 'CmdOrCtrl+]',
+          click: commandWebContents.bind(null, 'webview', 'forward'),
         },
-        { type: "separator" },
+        {type: 'separator'},
         {
-          label: "Scroll Down",
-          accelerator: "CmdOrCtrl+J",
-          click: commandWebContents.bind(null, "webview", "scroll_down")
+          label: 'Scroll Down',
+          accelerator: 'CmdOrCtrl+J',
+          click: commandWebContents.bind(null, 'webview', 'scroll_down'),
         },
         {
-          label: "Scroll Up",
-          accelerator: "CmdOrCtrl+K",
-          click: commandWebContents.bind(null, "webview", "scroll_up")
+          label: 'Scroll Up',
+          accelerator: 'CmdOrCtrl+K',
+          click: commandWebContents.bind(null, 'webview', 'scroll_up'),
         },
-        { type: "separator" },
+        {type: 'separator'},
         {
-          label: "Open Location",
-          accelerator: "CmdOrCtrl+L",
-          click: commandWebContents.bind(null, "webview", "open_location")
-        }
-      ]
+          label: 'Open Location',
+          accelerator: 'CmdOrCtrl+L',
+          click: commandWebContents.bind(null, 'webview', 'open_location'),
+        },
+      ],
     },
     {
-      label: "Window",
-      role: "window",
+      label: 'Window',
+      role: 'window',
       submenu: [
         {
-          label: "Zoom +",
-          accelerator: "CmdOrCtrl+Plus",
-          click: zoom.bind(null, 0.05, false)
+          label: 'Zoom +',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: zoom.bind(null, 0.05, false),
         },
         {
-          label: "Zoom -",
-          accelerator: "CmdOrCtrl+-",
-          click: zoom.bind(null, -0.05, false)
+          label: 'Zoom -',
+          accelerator: 'CmdOrCtrl+-',
+          click: zoom.bind(null, -0.05, false),
         },
         {
-          label: "Zoom Reset",
-          accelerator: "CmdOrCtrl+0",
-          click: zoom.bind(null, 1, true)
+          label: 'Zoom Reset',
+          accelerator: 'CmdOrCtrl+0',
+          click: zoom.bind(null, 1, true),
         },
-        { type: "separator" },
-        { label: "Minimize", accelerator: "CmdOrCtrl+M", role: "minimize" },
-        { label: "Bring All to Front", role: "front" }
-      ]
+        {type: 'separator'},
+        {label: 'Minimize', accelerator: 'CmdOrCtrl+M', role: 'minimize'},
+        {label: 'Bring All to Front', role: 'front'},
+      ],
     },
     {
-      label: "Help",
-      role: "help",
+      label: 'Help',
+      role: 'help',
       submenu: [
         {
-          label: "Documentation",
+          label: 'Documentation',
           submenu: [
             {
-              label: "Library",
+              label: 'Library',
               click: () => {
-                electron.shell.openExternal(
-                  "https://jasperapp.io/doc.html#library"
+                Electron.shell.openExternal(
+                  'https://jasperapp.io/doc.html#library',
                 );
-              }
+              },
             },
             {
-              label: "System",
+              label: 'System',
               click: () => {
-                electron.shell.openExternal(
-                  "https://jasperapp.io/doc.html#your-issues"
+                Electron.shell.openExternal(
+                  'https://jasperapp.io/doc.html#your-issues',
                 );
-              }
+              },
             },
             {
-              label: "Stream",
+              label: 'Stream',
               click: () => {
-                electron.shell.openExternal(
-                  "https://jasperapp.io/doc.html#stream"
+                Electron.shell.openExternal(
+                  'https://jasperapp.io/doc.html#stream',
                 );
-              }
+              },
             },
             {
-              label: "Filter",
+              label: 'Filter',
               click: () => {
-                electron.shell.openExternal(
-                  "https://jasperapp.io/doc.html#filter"
+                Electron.shell.openExternal(
+                  'https://jasperapp.io/doc.html#filter',
                 );
-              }
+              },
             },
             {
-              label: "Sort",
+              label: 'Sort',
               click: () => {
-                electron.shell.openExternal(
-                  "https://jasperapp.io/doc.html#sort"
+                Electron.shell.openExternal(
+                  'https://jasperapp.io/doc.html#sort',
                 );
-              }
+              },
             },
             {
-              label: "Issue",
+              label: 'Issue',
               click: () => {
-                electron.shell.openExternal(
-                  "https://jasperapp.io/doc.html#issue"
+                Electron.shell.openExternal(
+                  'https://jasperapp.io/doc.html#issue',
                 );
-              }
+              },
             },
             {
-              label: "Shortcut Key",
+              label: 'Shortcut Key',
               click: () => {
-                electron.shell.openExternal(
-                  "https://jasperapp.io/doc.html#shortcut"
+                Electron.shell.openExternal(
+                  'https://jasperapp.io/doc.html#shortcut',
                 );
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
         {
-          label: "FAQ",
+          label: 'FAQ',
           click: () => {
-            electron.shell.openExternal("https://jasperapp.io/faq.html");
-          }
+            Electron.shell.openExternal('https://jasperapp.io/faq.html');
+          },
         },
         {
-          label: "Feedback",
+          label: 'Feedback',
           click: () => {
-            electron.shell.openExternal("https://github.com/jasperapp/jasper");
-          }
-        }
-      ]
-    }
+            Electron.shell.openExternal('https://github.com/jasperapp/jasper');
+          },
+        },
+      ],
+    },
   ];
 
   const minimumTemplate = [
     {
-      label: "Application",
+      label: 'Application',
       submenu: [
-        { label: "About Jasper", click: showAbout },
-        { type: "separator" },
-        { label: "Services", role: "services" },
-        { type: "separator" },
-        { label: "Hide Jasper", accelerator: "Command+H", role: "hide" },
+        {label: 'About Jasper', click: showAbout},
+        {type: 'separator'},
+        {label: 'Services', role: 'services'},
+        {type: 'separator'},
+        {label: 'Hide Jasper', accelerator: 'Command+H', role: 'hide'},
         {
-          label: "Hide Others",
-          accelerator: "Option+Command+H",
-          role: "hideothers"
+          label: 'Hide Others',
+          accelerator: 'Option+Command+H',
+          role: 'hideothers',
         },
-        { label: "Show All", role: "unhide" },
-        { type: "separator" },
+        {label: 'Show All', role: 'unhide'},
+        {type: 'separator'},
         {
-          label: "Quit Jasper",
-          accelerator: "Command+Q",
+          label: 'Quit Jasper',
+          accelerator: 'Command+Q',
           click: () => {
-            electron.app.quit();
-          }
-        }
-      ]
+            Electron.app.quit();
+          },
+        },
+      ],
     },
     {
-      label: "Edit",
+      label: 'Edit',
       submenu: [
-        { label: "Undo", accelerator: "CmdOrCtrl+Z", role: "undo" },
-        { label: "Redo", accelerator: "Shift+CmdOrCtrl+Z", role: "redo" },
-        { type: "separator" },
-        { label: "Cut", accelerator: "CmdOrCtrl+X", role: "cut" },
-        { label: "Copy", accelerator: "CmdOrCtrl+C", role: "copy" },
-        { label: "Paste", accelerator: "CmdOrCtrl+V", role: "paste" },
-        { label: "Select All", accelerator: "CmdOrCtrl+A", role: "selectall" }
-      ]
+        {label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo'},
+        {label: 'Redo', accelerator: 'Shift+CmdOrCtrl+Z', role: 'redo'},
+        {type: 'separator'},
+        {label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut'},
+        {label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy'},
+        {label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste'},
+        {label: 'Select All', accelerator: 'CmdOrCtrl+A', role: 'selectall'},
+      ],
     },
     {
-      label: "Window",
-      role: "window",
+      label: 'Window',
+      role: 'window',
       submenu: [
-        { label: "Minimize", accelerator: "Command+M", role: "minimize" },
-        { label: "Bring All to Front", role: "front" }
-      ]
+        {label: 'Minimize', accelerator: 'Command+M', role: 'minimize'},
+        {label: 'Bring All to Front', role: 'front'},
+      ],
     },
     {
-      label: "Help",
-      role: "help",
+      label: 'Help',
+      role: 'help',
       submenu: [
         {
-          label: "Documentation",
+          label: 'Documentation',
           click: () => {
-            electron.shell.openExternal("https://jasperapp.io/doc.html");
-          }
+            Electron.shell.openExternal('https://jasperapp.io/doc.html');
+          },
         },
         {
-          label: "FAQ",
+          label: 'FAQ',
           click: () => {
-            electron.shell.openExternal("https://jasperapp.io/faq.html");
-          }
+            Electron.shell.openExternal('https://jasperapp.io/faq.html');
+          },
         },
         {
-          label: "Feedback",
+          label: 'Feedback',
           click: () => {
-            electron.shell.openExternal("https://github.com/jasperapp/jasper");
-          }
-        }
-      ]
-    }
+            Electron.shell.openExternal('https://github.com/jasperapp/jasper');
+          },
+        },
+      ],
+    },
   ];
 
   if (File.isExist(`${userDataPath}/.debug`)) {
     template.push({
-      label: "Dev",
+      label: 'Dev',
       submenu: [
         {
-          label: "DevTools(Main)",
+          label: 'DevTools(Main)',
           click: () => {
-            mainWindow.webContents.openDevTools({ mode: "detach" });
-          }
+            mainWindow.webContents.openDevTools({mode: 'detach'});
+          },
         },
         {
-          label: "DevTools(BrowserView)",
+          label: 'DevTools(BrowserView)',
           click: () => {
-            BrowserViewProxy.openDevTools({ mode: "detach" });
-          }
+            BrowserViewProxy.openDevTools({mode: 'detach'});
+          },
         },
-        { label: "Logs", click: showLogs }
-      ]
+        {label: 'Logs', click: showLogs},
+      ],
     });
 
     minimumTemplate.push({
-      label: "Dev",
+      label: 'Dev',
       submenu: [
         {
-          label: "DevTools",
+          label: 'DevTools',
           click: () => {
             mainWindow.webContents.openDevTools();
-          }
+          },
         },
-        { label: "Logs", click: showLogs }
-      ]
+        {label: 'Logs', click: showLogs},
+      ],
     });
   }
 
@@ -632,18 +633,18 @@ electron.app.on("ready", function() {
 
   minimumMenu = Menu.buildFromTemplate(minimumTemplate);
 
-  ipcMain.on("keyboard-shortcut", (ev, enable) => {
-    enableShortcut(appMenu.items[3], enable); // streams
-    enableShortcut(appMenu.items[4], enable); // issues
-    enableShortcut(appMenu.items[5], enable); // page
+  ipcMain.on('keyboard-shortcut', (ev, enable: boolean) => {
+    enableShortcut(appMenu!.items[3], enable); // streams
+    enableShortcut(appMenu!.items[4], enable); // issues
+    enableShortcut(appMenu!.items[5], enable); // page
   });
 
   initialize(mainWindow).catch(e => console.log(e));
 });
 
 async function quit() {
-  await require("./Util/GA").default.eventAppEnd("app", "end");
-  electron.app.exit(0);
+  await require('./Util/GA').default.eventAppEnd('app', 'end');
+  Electron.app.exit(0);
 }
 
 async function initialize(mainWindow) {
@@ -651,12 +652,12 @@ async function initialize(mainWindow) {
 
   mainWindow.loadURL(`file://${__dirname}/Electron/html/index.html`);
 
-  const Bootstrap = require("./Bootstrap.js").default;
+  const Bootstrap = require('./Bootstrap.js').default;
   await Bootstrap.start();
 
-  mainWindow.webContents.send("service-ready");
+  mainWindow.webContents.send('service-ready');
 
-  const VersionChecker = require("./Checker/VersionChecker.js").default;
+  const VersionChecker = require('./Checker/VersionChecker.js').default;
   VersionChecker.start(mainWindow);
 
   updateUnreadCountBadge();
@@ -665,20 +666,20 @@ async function initialize(mainWindow) {
   {
     let lastFocusedRestartTime = Date.now();
 
-    mainWindow.on("focus", () => {
-      require("./Util/GA").default.eventAppActive();
+    mainWindow.on('focus', () => {
+      require('./Util/GA').default.eventAppActive();
 
       // 最終restartから30分以上たっていたら、restartする
       const nowTime = Date.now();
       if (nowTime - lastFocusedRestartTime >= 1800000) {
         lastFocusedRestartTime = nowTime;
-        Logger.d("[restart streams only polling by focused]");
+        Logger.d('[restart streams only polling by focused]');
         restartAllStreamsOnlyPolling();
       }
     });
 
-    mainWindow.on("blur", () => {
-      require("./Util/GA").default.eventAppDeActive();
+    mainWindow.on('blur', () => {
+      require('./Util/GA').default.eventAppDeActive();
     });
   }
 
@@ -686,8 +687,8 @@ async function initialize(mainWindow) {
   {
     const view = new BrowserView({
       webPreferences: {
-        nodeIntegration: false
-      }
+        nodeIntegration: false,
+      },
     });
 
     mainWindow.setBrowserView(view);
@@ -699,12 +700,12 @@ async function initialize(mainWindow) {
 
 async function initializeConfig() {
   fs.ensureFileSync(configPath);
-  const isConfig = !!fs.readJsonSync(configPath, { throws: false });
+  const isConfig = !!fs.readJsonSync(configPath, {throws: false});
   if (!isConfig) {
     mainWindow.loadURL(`file://${__dirname}/Electron/html/setup/setup.html`);
 
     const promise = new Promise((resolve, reject) => {
-      ipcMain.on("apply-settings", (ev, settings) => {
+      ipcMain.on('apply-settings', (ev, settings) => {
         const configs = fs.readJsonSync(`${__dirname}/asset/config.json`);
         configs[0].github.accessToken = settings.accessToken;
         configs[0].github.host = settings.host;
@@ -713,12 +714,12 @@ async function initializeConfig() {
         configs[0].github.https = settings.https;
 
         if (!configs[0].github.accessToken || !configs[0].github.host) {
-          reject(new Error("invalid settings"));
-          electron.app.quit();
+          reject(new Error('invalid settings'));
+          Electron.app.quit();
           return;
         }
 
-        fs.writeJsonSync(configPath, configs, { spaces: 2 });
+        fs.writeJsonSync(configPath, configs, {spaces: 2});
         resolve();
       });
     });
@@ -731,12 +732,12 @@ async function initializeConfig() {
   // migration: from v0.1.1
   {
     const configs = fs.readJsonSync(configPath);
-    if (!("https" in configs[0].github)) {
+    if (!('https' in configs[0].github)) {
       configs[0].github.https = true;
       fs.writeJsonSync(configPath, configs);
     }
 
-    if (!("badge" in configs[0].general)) {
+    if (!('badge' in configs[0].general)) {
       configs[0].general.badge = false;
       fs.writeJsonSync(configPath, configs);
     }
@@ -745,7 +746,7 @@ async function initializeConfig() {
   // migration: to v0.2.1 from v0.2.0
   {
     const configs = fs.readJsonSync(configPath);
-    if (!("alwaysOpenOutdated" in configs[0].general)) {
+    if (!('alwaysOpenOutdated' in configs[0].general)) {
       configs[0].general.alwaysOpenOutdated = false;
       fs.writeJsonSync(configPath, configs);
     }
@@ -754,10 +755,9 @@ async function initializeConfig() {
   // migration: to v0.4.0
   {
     const configs = fs.readJsonSync(configPath);
-    if (!("theme" in configs[0])) {
-      for (const config of configs)
-        config.theme = { main: null, browser: null };
-      fs.writeJsonSync(configPath, configs, { spaces: 2 });
+    if (!('theme' in configs[0])) {
+      for (const config of configs) config.theme = {main: null, browser: null};
+      fs.writeJsonSync(configPath, configs, {spaces: 2});
     }
   }
 
@@ -765,51 +765,51 @@ async function initializeConfig() {
 }
 
 function restartAllStreams() {
-  const Bootstrap = require("./Bootstrap.js").default;
+  const Bootstrap = require('./Bootstrap.js').default;
   Bootstrap.restart();
 
-  const VersionChecker = require("./Checker/VersionChecker.js").default;
+  const VersionChecker = require('./Checker/VersionChecker.js').default;
   VersionChecker.restart(mainWindow);
 
-  require("./Util/GA").default.eventMenu("restart-all-streams");
+  require('./Util/GA').default.eventMenu('restart-all-streams');
 }
 
 function restartAllStreamsOnlyPolling() {
-  const Bootstrap = require("./Bootstrap.js").default;
+  const Bootstrap = require('./Bootstrap.js').default;
   Bootstrap.restartOnlyPolling();
 }
 
 function stopAllStreams() {
-  const Bootstrap = require("./Bootstrap.js").default;
+  const Bootstrap = require('./Bootstrap.js').default;
   Bootstrap.stop();
 }
 
 function showPreferences() {
   const config = Config.activeConfig;
-  const prefWindow = new electron.BrowserWindow({
-    title: "Preferences",
+  const prefWindow = new Electron.BrowserWindow({
+    title: 'Preferences',
     width: 500,
     height: 350,
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
     resizable: false,
-    parent: mainWindow
+    parent: mainWindow!,
   });
   prefWindow.loadURL(
-    `file://${__dirname}/Electron/html/preferences/preferences.html`
+    `file://${__dirname}/Electron/html/preferences/preferences.html`,
   );
 
-  prefWindow.webContents.on("dom-ready", () => {
-    prefWindow.webContents.send("current-config", config);
+  prefWindow.webContents.on('dom-ready', () => {
+    prefWindow.webContents.send('current-config', config);
   });
 
-  prefWindow.on("closed", () => {
+  prefWindow.on('closed', () => {
     Menu.setApplicationMenu(appMenu);
   });
 
-  ipcMain.on("apply-config", (ev, newConfig) => {
-    ipcMain.removeAllListeners("apply-config");
+  ipcMain.on('apply-config', (_ev: any, newConfig: Preference) => {
+    ipcMain.removeAllListeners('apply-config');
 
     let isChanged = false;
     if (config.general.browser !== newConfig.general.browser) isChanged = true;
@@ -844,76 +844,76 @@ function showPreferences() {
     }
   });
 
-  ipcMain.on("delete-all-data", async () => {
-    ipcMain.removeAllListeners("apply-config");
+  ipcMain.on('delete-all-data', async () => {
+    ipcMain.removeAllListeners('apply-config');
 
-    const Bootstrap = require("./Bootstrap.js").default;
+    const Bootstrap = require('./Bootstrap.js').default;
     Bootstrap.stop();
 
-    const DB = require("./DB/DB.js").default;
+    const DB = require('./DB/DB.js').default;
     await DB.close();
 
     try {
       fs.removeSync(userDataPath);
     } catch (e) {
       Logger.e(e);
-      fs.removeSync(require("path").dirname(configPath));
+      fs.removeSync(require('path').dirname(configPath));
     }
 
-    electron.app.quit();
+    Electron.app.quit();
   });
 
   // save streams
   {
-    ipcMain.removeAllListeners("save-streams");
-    ipcMain.on("save-streams", async () => {
-      const defaultPath = app.getPath("downloads") + "/jasper-streams.json";
-      const filePath = electron.dialog.showSaveDialog({ defaultPath });
+    ipcMain.removeAllListeners('save-streams');
+    ipcMain.on('save-streams', async () => {
+      const defaultPath = app.getPath('downloads') + '/jasper-streams.json';
+      const filePath = Electron.dialog.showSaveDialog({defaultPath});
       if (!filePath) return;
 
-      const output = await require("./Stream/SaveAndLoadStreams").default.save();
-      fs.writeJsonSync(filePath, output, { spaces: 2 });
+      const output = await require('./Stream/SaveAndLoadStreams').default.save();
+      fs.writeJsonSync(filePath, output, {spaces: 2});
     });
   }
 
   // load streams
   {
-    ipcMain.removeAllListeners("load-streams");
-    ipcMain.on("load-streams", async () => {
-      const defaultPath = app.getPath("downloads") + "/jasper-streams.json";
-      const tmp = electron.dialog.showOpenDialog({
+    ipcMain.removeAllListeners('load-streams');
+    ipcMain.on('load-streams', async () => {
+      const defaultPath = app.getPath('downloads') + '/jasper-streams.json';
+      const tmp = Electron.dialog.showOpenDialog({
         defaultPath,
-        properties: ["openFile"]
+        properties: ['openFile'],
       });
       if (!tmp || !tmp.length) return;
 
       const filePath = tmp[0];
       const data = fs.readJsonSync(filePath);
-      await require("./Stream/SaveAndLoadStreams").default.load(data);
+      await require('./Stream/SaveAndLoadStreams').default.load(data);
     });
   }
 
   // theme
   {
-    ipcMain.removeAllListeners("load-theme-main");
-    ipcMain.removeAllListeners("load-theme-browser");
-    ipcMain.removeAllListeners("load-theme-default");
+    ipcMain.removeAllListeners('load-theme-main');
+    ipcMain.removeAllListeners('load-theme-browser');
+    ipcMain.removeAllListeners('load-theme-default');
 
-    ipcMain.on("load-theme-main", () => {
+    ipcMain.on('load-theme-main', () => {
       // open dialog
-      const option = {
-        defaultPath: app.getPath("home"),
-        properties: ["openFile"],
-        filters: [{ name: "CSS", extensions: ["css"] }]
+      const option: Electron.OpenDialogOptions = {
+        defaultPath: app.getPath('home'),
+        properties: ['openFile'],
+        filters: [{name: 'CSS', extensions: ['css']}],
       };
-      const tmp = electron.dialog.showOpenDialog(option);
+      const tmp = Electron.dialog.showOpenDialog(option);
       if (!tmp || !tmp.length) return;
 
       const filePath = tmp[0];
 
       // emit loading theme
       const css = fs.readFileSync(filePath).toString();
-      mainWindow.webContents.send("load-theme-main", css);
+      mainWindow!.webContents.send('load-theme-main', css);
 
       // remove file
       if (Config.themeMainPath) fs.removeSync(Config.themeMainPath);
@@ -925,21 +925,21 @@ function showPreferences() {
       Config.updateConfig(Config.activeIndex, config);
     });
 
-    ipcMain.on("load-theme-browser", () => {
+    ipcMain.on('load-theme-browser', () => {
       // open dialog
-      const option = {
-        defaultPath: app.getPath("home"),
-        properties: ["openFile"],
-        filters: [{ name: "CSS", extensions: ["css"] }]
+      const option: Electron.OpenDialogOptions = {
+        defaultPath: app.getPath('home'),
+        properties: ['openFile'],
+        filters: [{name: 'CSS', extensions: ['css']}],
       };
-      const tmp = electron.dialog.showOpenDialog(option);
+      const tmp = Electron.dialog.showOpenDialog(option);
       if (!tmp || !tmp.length) return;
 
       const filePath = tmp[0];
 
       // emit loading theme
       const css = fs.readFileSync(filePath).toString();
-      mainWindow.webContents.send("load-theme-browser", css);
+      mainWindow!.webContents.send('load-theme-browser', css);
 
       // remove file
       if (Config.themeBrowserPath) fs.removeSync(Config.themeBrowserPath);
@@ -951,7 +951,7 @@ function showPreferences() {
       Config.updateConfig(Config.activeIndex, config);
     });
 
-    ipcMain.on("load-theme-default", () => {
+    ipcMain.on('load-theme-default', () => {
       if (Config.themeMainPath) fs.removeSync(Config.themeMainPath);
       if (Config.themeBrowserPath) fs.removeSync(Config.themeBrowserPath);
 
@@ -959,8 +959,8 @@ function showPreferences() {
       config.theme.browser = null;
       Config.updateConfig(Config.activeIndex, config);
 
-      mainWindow.webContents.send("load-theme-main", "");
-      mainWindow.webContents.send("load-theme-browser", "");
+      mainWindow!.webContents.send('load-theme-main', '');
+      mainWindow!.webContents.send('load-theme-browser', '');
     });
   }
 
@@ -969,45 +969,45 @@ function showPreferences() {
 }
 
 function showLogs() {
-  const logsWindow = new electron.BrowserWindow({
-    title: "Logs",
+  const logsWindow = new Electron.BrowserWindow({
+    title: 'Logs',
     width: 800,
     height: 600,
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
-    parent: mainWindow
+    parent: mainWindow!,
   });
   logsWindow.loadURL(`file://${__dirname}/Electron/html/logs/logs.html`);
-  logsWindow.on("closed", () => {
+  logsWindow.on('closed', () => {
     Menu.setApplicationMenu(appMenu);
   });
 
   Menu.setApplicationMenu(minimumMenu);
 }
 
-function switchLayout(layout) {
-  mainWindow.webContents.send("switch-layout", layout);
-  require("./Util/GA").default.eventMenu(`layout:${layout}`);
+function switchLayout(layout: string) {
+  mainWindow!.webContents.send('switch-layout', layout);
+  require('./Util/GA').default.eventMenu(`layout:${layout}`);
 }
 
 function showAbout() {
-  const aboutWindow = new electron.BrowserWindow({
-    title: "",
+  const aboutWindow = new Electron.BrowserWindow({
+    title: '',
     width: 275,
     height: 265,
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
     resizable: false,
-    parent: mainWindow
+    parent: mainWindow!,
   });
 
-  const version = electron.app.getVersion();
+  const version = Electron.app.getVersion();
   aboutWindow.loadURL(
-    `file://${__dirname}/Electron/html/about.html#${version}`
+    `file://${__dirname}/Electron/html/about.html#${version}`,
   );
-  aboutWindow.on("closed", () => {
+  aboutWindow.on('closed', () => {
     Menu.setApplicationMenu(appMenu);
   });
   Menu.setApplicationMenu(minimumMenu);
@@ -1015,23 +1015,23 @@ function showAbout() {
 }
 
 async function updateUnreadCountBadge() {
-  if (!electron.app.dock) return;
+  if (!Electron.app.dock) return;
 
-  const DB = require("./DB/DB.js").default;
-  const IssuesTable = require("./DB/IssuesTable.js").default;
-  const Config = require("./Config.js").default;
+  const DB = require('./DB/DB.js').default;
+  const IssuesTable = require('./DB/IssuesTable.js').default;
+  const Config = require('./Config.js').default;
 
   async function update() {
     if (!Config.generalBadge) {
-      electron.app.dock.setBadge("");
+      Electron.app.dock.setBadge('');
       return;
     }
 
     const count = await IssuesTable.unreadCount();
     if (count === 0) {
-      electron.app.dock.setBadge("");
+      Electron.app.dock.setBadge('');
     } else {
-      electron.app.dock.setBadge(count + "");
+      Electron.app.dock.setBadge(count + '');
     }
   }
 
@@ -1039,7 +1039,7 @@ async function updateUnreadCountBadge() {
   DB.addExecDoneListener(update);
 }
 
-function zoom(diffFactor, abs) {
+function zoom(diffFactor: number, abs: boolean) {
   if (abs) {
     currentZoom = diffFactor;
   } else {
@@ -1048,29 +1048,29 @@ function zoom(diffFactor, abs) {
 
   currentZoom = Math.max(currentZoom, 0.05);
 
-  mainWindow.webContents.setZoomFactor(currentZoom);
+  mainWindow!.webContents.setZoomFactor(currentZoom);
   BrowserViewProxy.setZoomFactor(currentZoom);
 
-  require("./Util/GA").default.eventMenu(`zoom:${currentZoom}`);
+  require('./Util/GA').default.eventMenu(`zoom:${currentZoom}`);
 }
 
 // target is webview|issues|streams
-function commandWebContents(target, command) {
+function commandWebContents(target: string, command: string) {
   // hack
   if (
     skipReadIssue &&
-    target === "issues" &&
-    ["next", "prev"].includes(command)
+    target === 'issues' &&
+    ['next', 'prev'].includes(command)
   )
     command = `${command}_with_skip`;
 
-  mainWindow.webContents.send(`command-${target}`, { command });
+  mainWindow!.webContents.send(`command-${target}`, {command});
 
-  require("./Util/GA").default.eventMenu(`${target}:${command}`);
+  require('./Util/GA').default.eventMenu(`${target}:${command}`);
 }
 
-function enableShortcut(menu, enable) {
-  if (!["Streams", "Issues", "Page"].includes(menu.label))
+function enableShortcut(menu: any, enable: boolean) {
+  if (!['Streams', 'Issues', 'Page'].includes(menu.label))
     throw new Error(`this is unknown menu: ${menu.label}`);
 
   for (const item of menu.submenu.items) {
