@@ -1,17 +1,17 @@
-import events from 'events';
-import electron from 'electron';
+import events from "events";
+import electron from "electron";
 
 const remote = electron.remote;
-const RemoteStreamEmitter = remote.require('./Stream/StreamEmitter.js').default;
+const RemoteStreamEmitter = remote.require("./Stream/StreamEmitter.js").default;
 
 const EVENT_NAMES = {
-  SELECT_STREAM: 'select_stream',
-  UPDATE_STREAM: 'update_stream',
-  OPEN_STREAM_SETTING: 'open_stream_setting',
-  CLOSE_STREAM_SETTING: 'close_stream_setting',
-  OPEN_FILTERED_STREAM_SETTING: 'open_filtered_stream_setting',
-  CLOSE_FILTERED_STREAM_SETTING: 'close_filtered_stream_setting',
-  RESTART_ALL_STREAMS: 'restart_all_streams'
+  SELECT_STREAM: "select_stream",
+  UPDATE_STREAM: "update_stream",
+  OPEN_STREAM_SETTING: "open_stream_setting",
+  CLOSE_STREAM_SETTING: "close_stream_setting",
+  OPEN_FILTERED_STREAM_SETTING: "open_filtered_stream_setting",
+  CLOSE_FILTERED_STREAM_SETTING: "close_filtered_stream_setting",
+  RESTART_ALL_STREAMS: "restart_all_streams"
 };
 
 export class StreamEmitter {
@@ -21,8 +21,12 @@ export class StreamEmitter {
     this._callbackId = 0;
 
     // hack: remoteを監視すると、メモリリークのおそれがある（例えば画面をリロードしたとき）
-    RemoteStreamEmitter.addUpdateStreamListener(this.emitUpdateStream.bind(this));
-    RemoteStreamEmitter.addRestartAllStreamsListener(this.emitRestartAllStreams.bind(this));
+    RemoteStreamEmitter.addUpdateStreamListener(
+      this.emitUpdateStream.bind(this)
+    );
+    RemoteStreamEmitter.addRestartAllStreamsListener(
+      this.emitRestartAllStreams.bind(this)
+    );
   }
 
   _addListener(eventName, callback) {
@@ -34,7 +38,8 @@ export class StreamEmitter {
   removeListeners(ids) {
     for (const id of ids) {
       const callback = this._callbacks[id];
-      if (callback) this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
+      if (callback)
+        this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
       delete this._callbacks[id];
     }
   }
@@ -51,7 +56,11 @@ export class StreamEmitter {
   // update stream
   emitUpdateStream(streamId, updatedIssueIds) {
     if (streamId >= 0) {
-      this._eventEmitter.emit(EVENT_NAMES.UPDATE_STREAM, streamId, updatedIssueIds);
+      this._eventEmitter.emit(
+        EVENT_NAMES.UPDATE_STREAM,
+        streamId,
+        updatedIssueIds
+      );
     }
   }
 
@@ -79,11 +88,19 @@ export class StreamEmitter {
 
   // open filtered stream setting
   emitOpenFilteredStreamSetting(stream, filter = null, filteredStream = null) {
-    this._eventEmitter.emit(EVENT_NAMES.OPEN_FILTERED_STREAM_SETTING, stream, filter, filteredStream);
+    this._eventEmitter.emit(
+      EVENT_NAMES.OPEN_FILTERED_STREAM_SETTING,
+      stream,
+      filter,
+      filteredStream
+    );
   }
 
   addOpenFilteredStreamSettingListener(callback) {
-    return this._addListener(EVENT_NAMES.OPEN_FILTERED_STREAM_SETTING, callback);
+    return this._addListener(
+      EVENT_NAMES.OPEN_FILTERED_STREAM_SETTING,
+      callback
+    );
   }
 
   // close filtered stream setting
@@ -92,7 +109,10 @@ export class StreamEmitter {
   }
 
   addCloseFilteredStreamSettingListener(callback) {
-    return this._addListener(EVENT_NAMES.CLOSE_FILTERED_STREAM_SETTING, callback);
+    return this._addListener(
+      EVENT_NAMES.CLOSE_FILTERED_STREAM_SETTING,
+      callback
+    );
   }
 
   // restart all streams

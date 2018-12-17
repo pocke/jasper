@@ -1,8 +1,8 @@
-import Logger from 'color-logger';
-import Timer from '../Util/Timer';
-import Config from '../Config';
-import GitHubClient from '../GitHub/GitHubClient';
-import Stream from './Stream';
+import Logger from "color-logger";
+import Timer from "../Util/Timer";
+import Config from "../Config";
+import GitHubClient from "../GitHub/GitHubClient";
+import Stream from "./Stream";
 
 export default class SystemTeamStream extends Stream {
   constructor(id, name, searchedAt) {
@@ -11,10 +11,10 @@ export default class SystemTeamStream extends Stream {
 
   async _buildQueries() {
     let watchings;
-    while(1) {
+    while (1) {
       try {
         watchings = await this._fetchWatchings();
-        Logger.n(`[watchings] ${watchings.join(', ')}`);
+        Logger.n(`[watchings] ${watchings.join(", ")}`);
         break;
       } catch (e) {
         Logger.e(e.toString());
@@ -26,7 +26,10 @@ export default class SystemTeamStream extends Stream {
     //return [watchings.map((watching)=> `repo:${watching}`).join(' ')];
     const queries = [];
     for (let i = 0; i < watchings.length; i += 20) {
-      const query = watchings.slice(i, i + 20).map((watching)=> `repo:${watching}`).join(' ');
+      const query = watchings
+        .slice(i, i + 20)
+        .map(watching => `repo:${watching}`)
+        .join(" ");
       queries.push(query);
     }
     return queries;
@@ -34,9 +37,17 @@ export default class SystemTeamStream extends Stream {
 
   async _fetchWatchings(page) {
     page = page || 1;
-    const client = new GitHubClient(Config.accessToken, Config.host, Config.pathPrefix, Config.https);
+    const client = new GitHubClient(
+      Config.accessToken,
+      Config.host,
+      Config.pathPrefix,
+      Config.https
+    );
 
-    const { headers, body } = await client.requestImmediate('/user/subscriptions', { per_page: 100, page });
+    const { headers, body } = await client.requestImmediate(
+      "/user/subscriptions",
+      { per_page: 100, page }
+    );
     const link = headers.link;
 
     let rest = [];
@@ -44,6 +55,6 @@ export default class SystemTeamStream extends Stream {
       rest = await this._fetchWatchings(page + 1);
     }
 
-    return body.map((item)=> item.full_name).concat(rest);
+    return body.map(item => item.full_name).concat(rest);
   }
 }

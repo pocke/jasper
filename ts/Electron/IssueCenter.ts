@@ -1,11 +1,11 @@
-import moment from 'moment';
-import electron from 'electron';
-import IssueEmitter from './IssueEmitter';
-import Issue from './Issue/Issue';
-import LibraryIssue from './Issue/LibraryIssue';
-import IssueFilter from './Issue/IssueFilter';
+import moment from "moment";
+import electron from "electron";
+import IssueEmitter from "./IssueEmitter";
+import Issue from "./Issue/Issue";
+import LibraryIssue from "./Issue/LibraryIssue";
+import IssueFilter from "./Issue/IssueFilter";
 
-const DB = electron.remote.require('./DB/DB.js').default;
+const DB = electron.remote.require("./DB/DB.js").default;
 
 export class IssueCenter {
   isRead(issue) {
@@ -13,7 +13,9 @@ export class IssueCenter {
   }
 
   async findIssue(issueId) {
-    const issue = await DB.selectSingle('select * from issues where id = ?', [issueId]);
+    const issue = await DB.selectSingle("select * from issues where id = ?", [
+      issueId
+    ]);
     const value = JSON.parse(issue.value);
 
     // todo: this hack is for old github response
@@ -29,15 +31,19 @@ export class IssueCenter {
   }
 
   async findIssuesByIds(issueIds, suppressSlowQueryLog) {
-    const issues = await DB.select(`
+    const issues = await DB.select(
+      `
       select
         *
       from
         issues
       where
-        id in (${issueIds.join(',')}) and
+        id in (${issueIds.join(",")}) and
         archived_at is null
-    `, null, suppressSlowQueryLog);
+    `,
+      null,
+      suppressSlowQueryLog
+    );
 
     for (const issue of issues) {
       const value = JSON.parse(issue.value);
@@ -59,37 +65,62 @@ export class IssueCenter {
     return await Issue.findIssues(streamId, filterQuery, pageNumber, perPage);
   }
 
-  async findIssuesFromLibrary(libraryName, filterQuery, pageNumber, perPage = 30) {
-    return await LibraryIssue.findIssues(libraryName, filterQuery, pageNumber, perPage);
+  async findIssuesFromLibrary(
+    libraryName,
+    filterQuery,
+    pageNumber,
+    perPage = 30
+  ) {
+    return await LibraryIssue.findIssues(
+      libraryName,
+      filterQuery,
+      pageNumber,
+      perPage
+    );
   }
 
   async update(issueId, date) {
-    const updatedAt = moment(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
-    await DB.exec(`update issues set updated_at = ? where id = ?`, [updatedAt, issueId]);
+    const updatedAt = moment(date)
+      .utc()
+      .format("YYYY-MM-DDTHH:mm:ss[Z]");
+    await DB.exec(`update issues set updated_at = ? where id = ?`, [
+      updatedAt,
+      issueId
+    ]);
   }
 
   async read(issueId, date) {
     if (date) {
-      const readAt = moment(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
-      await DB.exec(`
+      const readAt = moment(date)
+        .utc()
+        .format("YYYY-MM-DDTHH:mm:ss[Z]");
+      await DB.exec(
+        `
         update issues set
           read_at = ?,
           prev_read_at = read_at,
           read_body = body,
           prev_read_body = read_body
         where id = ?`,
-      [readAt, issueId]);
+        [readAt, issueId]
+      );
     } else {
-      await DB.exec(`
+      await DB.exec(
+        `
         update issues set
           read_at = prev_read_at,
           prev_read_at = null,
           read_body = prev_read_body,
           prev_read_body = null
         where id = ?`,
-      [issueId]);
+        [issueId]
+      );
       const _issue = await this.findIssue(issueId);
-      if (this.isRead(_issue)) await DB.exec(`update issues set read_at = prev_read_at, prev_read_at = null where id = ?`, [issueId]);
+      if (this.isRead(_issue))
+        await DB.exec(
+          `update issues set read_at = prev_read_at, prev_read_at = null where id = ?`,
+          [issueId]
+        );
     }
 
     const issue = await this.findIssue(issueId);
@@ -99,10 +130,17 @@ export class IssueCenter {
 
   async mark(issueId, date) {
     if (date) {
-      const markedAt = moment(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
-      await DB.exec('update issues set marked_at = ? where id = ?', [markedAt, issueId]);
+      const markedAt = moment(date)
+        .utc()
+        .format("YYYY-MM-DDTHH:mm:ss[Z]");
+      await DB.exec("update issues set marked_at = ? where id = ?", [
+        markedAt,
+        issueId
+      ]);
     } else {
-      await DB.exec('update issues set marked_at = null where id = ?', [issueId]);
+      await DB.exec("update issues set marked_at = null where id = ?", [
+        issueId
+      ]);
     }
 
     const issue = await this.findIssue(issueId);
@@ -114,10 +152,17 @@ export class IssueCenter {
 
   async archive(issueId, date) {
     if (date) {
-      const archivedAt = moment(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
-      await DB.exec('update issues set archived_at = ? where id = ?', [archivedAt, issueId]);
+      const archivedAt = moment(date)
+        .utc()
+        .format("YYYY-MM-DDTHH:mm:ss[Z]");
+      await DB.exec("update issues set archived_at = ? where id = ?", [
+        archivedAt,
+        issueId
+      ]);
     } else {
-      await DB.exec('update issues set archived_at = null where id = ?', [issueId]);
+      await DB.exec("update issues set archived_at = null where id = ?", [
+        issueId
+      ]);
     }
 
     const issue = await this.findIssue(issueId);
@@ -129,15 +174,18 @@ export class IssueCenter {
 
   async readAll(streamId, filter = null) {
     const date = new Date();
-    const readAt = moment(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
+    const readAt = moment(date)
+      .utc()
+      .format("YYYY-MM-DDTHH:mm:ss[Z]");
 
-    let filterCondition = '';
+    let filterCondition = "";
     if (filter) {
       const tmp = IssueFilter.buildCondition(filter);
       filterCondition = `and ${tmp.filter}`;
     }
 
-    await DB.exec(`
+    await DB.exec(
+      `
       update
         issues
       set
@@ -149,15 +197,20 @@ export class IssueCenter {
         (read_at is null or read_at < updated_at) and
         archived_at is null
         ${filterCondition}
-    `, [readAt, streamId]);
+    `,
+      [readAt, streamId]
+    );
 
     IssueEmitter.emitReadAllIssues(streamId);
   }
 
   async readIssues(issueIds) {
     const date = new Date();
-    const readAt = moment(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
-    await DB.exec(`
+    const readAt = moment(date)
+      .utc()
+      .format("YYYY-MM-DDTHH:mm:ss[Z]");
+    await DB.exec(
+      `
       update
         issues
       set
@@ -165,9 +218,11 @@ export class IssueCenter {
         read_body = body,
         prev_read_body = read_body
       where
-        id in (${issueIds.join(',')}) and
+        id in (${issueIds.join(",")}) and
         (read_at is null or read_at < updated_at)
-    `, [readAt]);
+    `,
+      [readAt]
+    );
 
     IssueEmitter.emitReadIssues(issueIds);
   }
@@ -194,15 +249,14 @@ export class IssueCenter {
         stream_id is null;
     `);
 
-    const issueIds = issues.map((issue) => issue.id);
+    const issueIds = issues.map(issue => issue.id);
     await DB.exec(`
       delete from
         issues
       where
-        id in (${issueIds.join(',')})
+        id in (${issueIds.join(",")})
     `);
   }
 }
 
 export default new IssueCenter();
-

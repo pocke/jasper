@@ -1,31 +1,43 @@
-import moment from 'moment';
-import electron from 'electron';
-import SystemStreamEmitter from './SystemStreamEmitter';
-import IssueCenter from './IssueCenter';
+import moment from "moment";
+import electron from "electron";
+import SystemStreamEmitter from "./SystemStreamEmitter";
+import IssueCenter from "./IssueCenter";
 
 const remote = electron.remote;
-const Config = remote.require('./Config.js').default;
-const DB = remote.require('./DB/DB.js').default;
-const GitHubClient = remote.require('./GitHub/GitHubClient.js').default;
-const SystemStreamLauncher = remote.require('./Stream/SystemStreamLauncher').default;
-const IssuesTable = remote.require('./DB/IssuesTable.js').default;
-const StreamsIssuesTable = remote.require('./DB/StreamsIssuesTable.js').default;
+const Config = remote.require("./Config.js").default;
+const DB = remote.require("./DB/DB.js").default;
+const GitHubClient = remote.require("./GitHub/GitHubClient.js").default;
+const SystemStreamLauncher = remote.require("./Stream/SystemStreamLauncher")
+  .default;
+const IssuesTable = remote.require("./DB/IssuesTable.js").default;
+const StreamsIssuesTable = remote.require("./DB/StreamsIssuesTable.js").default;
 
 export class SystemStreamCenter {
-  get STREAM_ID_ME() { return -1; }
-  get STREAM_ID_TEAM() { return -2; }
-  get STREAM_ID_WATCHING() { return -3; }
-  get STREAM_ID_SUBSCRIPTION() { return -4; }
+  get STREAM_ID_ME() {
+    return -1;
+  }
+  get STREAM_ID_TEAM() {
+    return -2;
+  }
+  get STREAM_ID_WATCHING() {
+    return -3;
+  }
+  get STREAM_ID_SUBSCRIPTION() {
+    return -4;
+  }
 
   async findStream(streamId) {
-    return await DB.selectSingle(`
+    return await DB.selectSingle(
+      `
       select
         *
       from
         system_streams
       where
         id = ?
-    `, [streamId]);
+    `,
+      [streamId]
+    );
   }
 
   async findAllStreams() {
@@ -61,14 +73,17 @@ export class SystemStreamCenter {
   }
 
   async rewriteStream(streamId, enabled, notification) {
-    await DB.exec(`
+    await DB.exec(
+      `
       update
         system_streams
       set
         enabled = ?, notification = ?
       where
         id = ?
-    `, [enabled, notification, streamId]);
+    `,
+      [enabled, notification, streamId]
+    );
     SystemStreamLauncher.restartAll();
     SystemStreamEmitter.emitRestartAllStreams();
   }
@@ -78,7 +93,10 @@ export class SystemStreamCenter {
   }
 
   async isSubscription(url) {
-    const res = await DB.selectSingle('select * from subscription_issues where url = ?', [url]);
+    const res = await DB.selectSingle(
+      "select * from subscription_issues where url = ?",
+      [url]
+    );
     return !!res;
   }
 
@@ -86,25 +104,37 @@ export class SystemStreamCenter {
     const already = await this.isSubscription(url);
     if (already) return;
 
-    const urlPaths = url.split('/').reverse();
+    const urlPaths = url.split("/").reverse();
     const repo = `${urlPaths[3]}/${urlPaths[2]}`;
     const number = urlPaths[0];
 
-    const client = new GitHubClient(Config.accessToken, Config.host, Config.pathPrefix, Config.https);
-    const res = await client.requestImmediate(`/repos/${repo}/issues/${number}`);
+    const client = new GitHubClient(
+      Config.accessToken,
+      Config.host,
+      Config.pathPrefix,
+      Config.https
+    );
+    const res = await client.requestImmediate(
+      `/repos/${repo}/issues/${number}`
+    );
     const issue = res.body;
 
     await IssuesTable.import([issue]);
     await StreamsIssuesTable.import(this.STREAM_ID_SUBSCRIPTION, [issue]);
 
-    const createdAt = moment(new Date()).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
-    await DB.exec(`
+    const createdAt = moment(new Date())
+      .utc()
+      .format("YYYY-MM-DDTHH:mm:ss[Z]");
+    await DB.exec(
+      `
       insert into
         subscription_issues
         (issue_id, repo, url, created_at)
       values
         (?, ?, ?, ?)
-    `, [issue.id, repo, url, createdAt]);
+    `,
+      [issue.id, repo, url, createdAt]
+    );
 
     SystemStreamLauncher.restartAll();
     SystemStreamEmitter.emitRestartAllStreams();
@@ -114,10 +144,16 @@ export class SystemStreamCenter {
     const already = await this.isSubscription(url);
     if (!already) return;
 
-    const subscriptionIssue = await DB.selectSingle('select * from subscription_issues where url = ?', [url]);
-    await DB.exec('delete from subscription_issues where url = ?', [url]);
+    const subscriptionIssue = await DB.selectSingle(
+      "select * from subscription_issues where url = ?",
+      [url]
+    );
+    await DB.exec("delete from subscription_issues where url = ?", [url]);
 
-    await DB.exec('delete from streams_issues where stream_id = ? and issue_id = ?', [this.STREAM_ID_SUBSCRIPTION, subscriptionIssue.issue_id]);
+    await DB.exec(
+      "delete from streams_issues where stream_id = ? and issue_id = ?",
+      [this.STREAM_ID_SUBSCRIPTION, subscriptionIssue.issue_id]
+    );
 
     SystemStreamLauncher.restartAll();
     SystemStreamEmitter.emitRestartAllStreams();

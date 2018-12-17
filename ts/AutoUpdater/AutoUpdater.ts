@@ -1,8 +1,8 @@
-import electron from 'electron';
-import path from 'path';
-import https from 'https';
-import fs from 'fs-extra';
-import Zip from 'node-zip';
+import electron from "electron";
+import path from "path";
+import https from "https";
+import fs from "fs-extra";
+import Zip from "node-zip";
 
 // this AutoUpdater is very prototype.
 // un-resolved problem is here
@@ -17,19 +17,19 @@ export class AutoUpdater {
     // see https://github.com/electron/electron/blob/787bc8570382e98c4f204abff05b2af122e5a422/lib/common/asar.js#L173
     process.noAsar = true;
 
-    const tempZipPath = path.join(electron.app.getPath('temp'), 'jasper.zip');
-    const tempPath = path.join(electron.app.getPath('temp'), 'jasper');
+    const tempZipPath = path.join(electron.app.getPath("temp"), "jasper.zip");
+    const tempPath = path.join(electron.app.getPath("temp"), "jasper");
     fs.removeSync(tempZipPath);
     fs.removeSync(tempPath);
 
     try {
       const data = await this._fetchFile();
-      const zip = new Zip(data, {base64: false, checkCRC32: true});
+      const zip = new Zip(data, { base64: false, checkCRC32: true });
 
       const symlinks = [];
       for (const name of Object.keys(zip.files)) {
         // mac zip file includes meta-file(?)
-        if (name.indexOf('__MACOSX') === 0) continue;
+        if (name.indexOf("__MACOSX") === 0) continue;
 
         const file = zip.files[name];
         const outputPath = path.join(tempPath, file.name);
@@ -39,7 +39,7 @@ export class AutoUpdater {
           if (this._isSymlink(file)) {
             symlinks.push(file);
           } else {
-            fs.outputFileSync(outputPath, file._data, {encoding: 'binary'});
+            fs.outputFileSync(outputPath, file._data, { encoding: "binary" });
             // todo: handling Windows
             fs.chmodSync(outputPath, file.unixPermissions);
           }
@@ -54,8 +54,7 @@ export class AutoUpdater {
       }
 
       delete process.noAsar;
-
-    } catch(e) {
+    } catch (e) {
       console.log(e);
     }
   }
@@ -68,32 +67,34 @@ export class AutoUpdater {
   async _fetchFile() {
     const url = await this._fetchUrl();
 
-    return new Promise((resolve, reject)=> {
-      https.get(url, (res) => {
-        const statusCode = res.statusCode;
+    return new Promise((resolve, reject) => {
+      https
+        .get(url, res => {
+          const statusCode = res.statusCode;
 
-        let body = '';
-        res.on('data', (chunk) => body += chunk);
+          let body = "";
+          res.on("data", chunk => (body += chunk));
 
-        res.on('end', ()=> {
-          if (statusCode !== 200) {
-            reject(new Error(body));
-          }
-          resolve(body);
+          res.on("end", () => {
+            if (statusCode !== 200) {
+              reject(new Error(body));
+            }
+            resolve(body);
+          });
+        })
+        .on("error", e => {
+          console.error(e);
+          reject(e);
         });
-
-      }).on('error', (e) => {
-        console.error(e);
-        reject(e);
-      });
     });
   }
 
   _fetchUrl() {
-    return new Promise((resolve, reject)=> {
-      const url = 'https://github.com/jasperapp/jasper/releases/download/v0.1.2/jasper_v0.1.2_trial_mac.app.zip';
+    return new Promise((resolve, reject) => {
+      const url =
+        "https://github.com/jasperapp/jasper/releases/download/v0.1.2/jasper_v0.1.2_trial_mac.app.zip";
 
-      const req = https.get(url, (res) => {
+      const req = https.get(url, res => {
         const statusCode = res.statusCode;
         if (statusCode === 302) {
           resolve(res.headers.location);
@@ -104,7 +105,7 @@ export class AutoUpdater {
         req.abort();
       });
 
-      req.on('error', (e) => {
+      req.on("error", e => {
         console.error(e);
         reject(e);
       });

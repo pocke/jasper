@@ -1,14 +1,18 @@
-import fs from 'fs-extra';
-import path from 'path';
+import fs from "fs-extra";
+import path from "path";
 
 export class Config {
-  get BROWSER_BUILTIN() { return 'builtin'; }
-  get BROWSER_EXTERNAL() { return 'external'; }
+  get BROWSER_BUILTIN() {
+    return "builtin";
+  }
+  get BROWSER_EXTERNAL() {
+    return "external";
+  }
 
   initialize(path) {
     this._activeIndex = 0;
     this._configPath = path;
-    this._configs = fs.readJsonSync(path, {throws: false});
+    this._configs = fs.readJsonSync(path, { throws: false });
     this._config = this._configs[this._activeIndex];
     this._loginName = null;
   }
@@ -29,26 +33,29 @@ export class Config {
     config.database.path = `./main-${Date.now()}.db`;
 
     this._configs.push(config);
-    fs.writeJsonSync(this._configPath, this._configs, {spaces: 2});
+    fs.writeJsonSync(this._configPath, this._configs, { spaces: 2 });
   }
 
   updateConfigGitHub(index, configGitHub) {
     this._configs[index].github = configGitHub;
-    fs.writeJsonSync(this._configPath, this._configs, {spaces: 2});
+    fs.writeJsonSync(this._configPath, this._configs, { spaces: 2 });
   }
 
   updateConfig(index, config) {
     this._configs[index] = config;
-    fs.writeJsonSync(this._configPath, this._configs, {spaces: 2});
+    fs.writeJsonSync(this._configPath, this._configs, { spaces: 2 });
   }
 
   deleteConfig(index) {
     const config = this._configs[index];
-    const dbPath = path.resolve(path.dirname(this._configPath), config.database.path);
+    const dbPath = path.resolve(
+      path.dirname(this._configPath),
+      config.database.path
+    );
     fs.removeSync(dbPath);
 
     this._configs.splice(index, 1);
-    fs.writeJsonSync(this._configPath, this._configs, {spaces: 2});
+    fs.writeJsonSync(this._configPath, this._configs, { spaces: 2 });
   }
 
   get configs() {
@@ -97,7 +104,10 @@ export class Config {
   }
 
   get databasePath() {
-    return path.resolve(path.dirname(this._configPath), this._config.database.path);
+    return path.resolve(
+      path.dirname(this._configPath),
+      this._config.database.path
+    );
   }
 
   get databaseMax() {
@@ -111,7 +121,7 @@ export class Config {
   set generalBrowser(value) {
     if ([this.BROWSER_BUILTIN, this.BROWSER_EXTERNAL].includes(value)) {
       this._config.general.browser = value;
-      fs.writeJsonSync(this._configPath, this._configs, {spaces: 2});
+      fs.writeJsonSync(this._configPath, this._configs, { spaces: 2 });
     } else {
       throw new Error(`unknown browser: ${value}`);
     }
@@ -143,12 +153,18 @@ export class Config {
 
   get themeMainPath() {
     if (!this._config.theme.main) return null;
-    return path.resolve(path.dirname(this._configPath), this._config.theme.main);
+    return path.resolve(
+      path.dirname(this._configPath),
+      this._config.theme.main
+    );
   }
 
   get themeBrowserPath() {
     if (!this._config.theme.browser) return null;
-    return path.resolve(path.dirname(this._configPath), this._config.theme.browser);
+    return path.resolve(
+      path.dirname(this._configPath),
+      this._config.theme.browser
+    );
   }
 }
 

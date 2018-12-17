@@ -1,4 +1,4 @@
-import os from 'os';
+import os from "os";
 
 export class Platform {
   name() {
@@ -6,15 +6,15 @@ export class Platform {
   }
 
   isMac() {
-    return os.platform() === 'darwin';
+    return os.platform() === "darwin";
   }
 
   isWin() {
-    return os.platform() === 'win32';
+    return os.platform() === "win32";
   }
 
   isLinux() {
-    return os.platform() === 'linux';
+    return os.platform() === "linux";
   }
 }
 

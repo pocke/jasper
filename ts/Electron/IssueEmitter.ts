@@ -1,14 +1,14 @@
-import events from 'events';
+import events from "events";
 
 const EVENT_NAMES = {
-  SELECT_ISSUE: 'select_issue',
-  FOCUS_ISSUE: 'focus_issue',
-  READ_ISSUE: 'read_issue',
-  MARK_ISSUE: 'mark_issue',
-  ARCHIVE_ISSUE: 'archive_issue',
-  READ_ALL_ISSUES: 'read_all_issues',
-  READ_ALL_ISSUES_FROM_LIBRARY: 'read_all_issues_from_library',
-  READ_ISSUES: 'read_issues'
+  SELECT_ISSUE: "select_issue",
+  FOCUS_ISSUE: "focus_issue",
+  READ_ISSUE: "read_issue",
+  MARK_ISSUE: "mark_issue",
+  ARCHIVE_ISSUE: "archive_issue",
+  READ_ALL_ISSUES: "read_all_issues",
+  READ_ALL_ISSUES_FROM_LIBRARY: "read_all_issues_from_library",
+  READ_ISSUES: "read_issues"
 };
 
 export class IssueEmitter {
@@ -27,7 +27,8 @@ export class IssueEmitter {
   removeListeners(ids) {
     for (const id of ids) {
       const callback = this._callbacks[id];
-      if (callback) this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
+      if (callback)
+        this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
       delete this._callbacks[id];
     }
   }
@@ -88,11 +89,17 @@ export class IssueEmitter {
 
   // read all from library
   emitReadAllIssuesFromLibrary(streamName) {
-    this._eventEmitter.emit(EVENT_NAMES.READ_ALL_ISSUES_FROM_LIBRARY, streamName);
+    this._eventEmitter.emit(
+      EVENT_NAMES.READ_ALL_ISSUES_FROM_LIBRARY,
+      streamName
+    );
   }
 
   addReadAllIssuesFromLibraryListener(callback) {
-    return this._addListener(EVENT_NAMES.READ_ALL_ISSUES_FROM_LIBRARY, callback);
+    return this._addListener(
+      EVENT_NAMES.READ_ALL_ISSUES_FROM_LIBRARY,
+      callback
+    );
   }
 
   // read issues

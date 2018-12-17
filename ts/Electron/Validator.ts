@@ -8,12 +8,13 @@ export class Validator {
     if (!config.accessToken.match(/^[0-9a-z]+$/)) return false;
 
     // validate path prefix
-    if (config.host !== 'api.github.com' && !config.pathPrefix) return false;
-    if (config.host === 'api.github.com' && config.pathPrefix) return false;
+    if (config.host !== "api.github.com" && !config.pathPrefix) return false;
+    if (config.host === "api.github.com" && config.pathPrefix) return false;
 
     // validate web host
     if (!config.webHost) return false;
-    if (config.host === 'api.github.com' && config.webHost !== 'github.com') return false;
+    if (config.host === "api.github.com" && config.webHost !== "github.com")
+      return false;
 
     return true;
   }

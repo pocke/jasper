@@ -1,6 +1,6 @@
-import events from 'events';
+import events from "events";
 const EVENT_NAMES = {
-  SCROLL: 'scroll'
+  SCROLL: "scroll"
 };
 
 export class WebViewEmitter {
@@ -19,7 +19,8 @@ export class WebViewEmitter {
   removeListeners(ids) {
     for (const id of ids) {
       const callback = this._callbacks[id];
-      if (callback) this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
+      if (callback)
+        this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
       delete this._callbacks[id];
     }
   }

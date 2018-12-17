@@ -1,17 +1,17 @@
-import events from 'events';
-import electron from 'electron';
+import events from "events";
+import electron from "electron";
 
 const remote = electron.remote;
-const RemoteStreamEmitter = remote.require('./Stream/StreamEmitter.js').default;
+const RemoteStreamEmitter = remote.require("./Stream/StreamEmitter.js").default;
 
 const EVENT_NAMES = {
-  SELECT_STREAM: 'select_stream',
-  UPDATE_STREAM: 'update_stream',
-  OPEN_STREAM_SETTING: 'open_stream_setting',
-  CLOSE_STREAM_SETTING: 'close_stream_setting',
-  OPEN_SUBSCRIPTION_SETTING: 'open_subscription_setting',
-  CLOSE_SUBSCRIPTION_SETTING: 'close_subscription_setting',
-  RESTART_ALL_STREAMS: 'restart_all_streams'
+  SELECT_STREAM: "select_stream",
+  UPDATE_STREAM: "update_stream",
+  OPEN_STREAM_SETTING: "open_stream_setting",
+  CLOSE_STREAM_SETTING: "close_stream_setting",
+  OPEN_SUBSCRIPTION_SETTING: "open_subscription_setting",
+  CLOSE_SUBSCRIPTION_SETTING: "close_subscription_setting",
+  RESTART_ALL_STREAMS: "restart_all_streams"
 };
 
 export class SystemStreamEmitter {
@@ -21,7 +21,9 @@ export class SystemStreamEmitter {
     this._callbackId = 0;
 
     // hack: remoteを監視すると、メモリリークのおそれがある（例えば画面をリロードしたとき）
-    RemoteStreamEmitter.addUpdateStreamListener(this.emitUpdateStream.bind(this));
+    RemoteStreamEmitter.addUpdateStreamListener(
+      this.emitUpdateStream.bind(this)
+    );
   }
 
   _addListener(eventName, callback) {
@@ -33,7 +35,8 @@ export class SystemStreamEmitter {
   removeListeners(ids) {
     for (const id of ids) {
       const callback = this._callbacks[id];
-      if (callback) this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
+      if (callback)
+        this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
       delete this._callbacks[id];
     }
   }
@@ -50,7 +53,11 @@ export class SystemStreamEmitter {
   // update stream
   emitUpdateStream(streamId, updatedIssueIds) {
     if (streamId < 0) {
-      this._eventEmitter.emit(EVENT_NAMES.UPDATE_STREAM, streamId, updatedIssueIds);
+      this._eventEmitter.emit(
+        EVENT_NAMES.UPDATE_STREAM,
+        streamId,
+        updatedIssueIds
+      );
     }
   }
   addUpdateStreamListener(callback) {

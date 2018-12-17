@@ -1,6 +1,6 @@
-import Stream from './Stream';
-import StreamsTable from '../DB/StreamsTable';
-import DateConverter from '../Util/DateConverter'
+import Stream from "./Stream";
+import StreamsTable from "../DB/StreamsTable";
+import DateConverter from "../Util/DateConverter";
 
 export class StreamLauncher {
   constructor() {
@@ -11,7 +11,12 @@ export class StreamLauncher {
     const streamRows = await StreamsTable.all();
     for (const streamRow of streamRows) {
       const queries = JSON.parse(streamRow.queries);
-      const stream = new Stream(streamRow.id, streamRow.name, queries, streamRow.searched_at);
+      const stream = new Stream(
+        streamRow.id,
+        streamRow.name,
+        queries,
+        streamRow.searched_at
+      );
 
       const updatedAt = DateConverter.utcToUnix(streamRow.updated_at);
       const diffMilliSec = Date.now() - updatedAt;

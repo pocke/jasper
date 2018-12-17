@@ -1,5 +1,5 @@
-import electron from 'electron';
-const DB = electron.remote.require('./DB/DB.js').default;
+import electron from "electron";
+const DB = electron.remote.require("./DB/DB.js").default;
 
 export class LibraryStreamCenter {
   async findAllStreams() {
@@ -25,7 +25,7 @@ export class LibraryStreamCenter {
         ((read_at is null) or (updated_at > read_at))
         and archived_at is null
     `);
-    return {name: 'Inbox', unreadCount: result.count};
+    return { name: "Inbox", unreadCount: result.count };
   }
 
   async findUnreadStream() {
@@ -40,7 +40,7 @@ export class LibraryStreamCenter {
         ((read_at is null) or (updated_at > read_at))
         and archived_at is null
     `);
-    return {name: 'Unread', unreadCount: result.count};
+    return { name: "Unread", unreadCount: result.count };
   }
 
   async findMarkedStream() {
@@ -56,7 +56,7 @@ export class LibraryStreamCenter {
         and ((read_at is null) or (updated_at > read_at))
         and archived_at is null
     `);
-    return {name: 'Marked', unreadCount: result.count};
+    return { name: "Marked", unreadCount: result.count };
   }
 
   async findOpenStream() {
@@ -72,7 +72,7 @@ export class LibraryStreamCenter {
         and ((read_at is null) or (updated_at > read_at))
         and archived_at is null
     `);
-    return {name: 'Open', unreadCount: result.count};
+    return { name: "Open", unreadCount: result.count };
   }
 
   async findArchivedStream() {
@@ -87,7 +87,7 @@ export class LibraryStreamCenter {
         archived_at is not null
         and ((read_at is null) or (updated_at > read_at))
     `);
-    return {name: 'Archived', unreadCount: result.count};
+    return { name: "Archived", unreadCount: result.count };
   }
 }
 

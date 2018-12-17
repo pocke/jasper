@@ -1,19 +1,34 @@
-import electron from 'electron';
-import IssueFilter from './IssueFilter';
-import moment from 'moment';
+import electron from "electron";
+import IssueFilter from "./IssueFilter";
+import moment from "moment";
 
 const remote = electron.remote;
-const DB = remote.require('./DB/DB.js').default;
+const DB = remote.require("./DB/DB.js").default;
 
 export class LibraryIssue {
-  async findIssues(libraryStreamName, filterQuery = null, pageNumber = 0, perPage = 30) {
+  async findIssues(
+    libraryStreamName,
+    filterQuery = null,
+    pageNumber = 0,
+    perPage = 30
+  ) {
     let sql;
     switch (libraryStreamName) {
-      case 'Inbox': sql = this._buildInboxSQL(); break;
-      case 'Unread': sql = this._buildUnreadSQL(); break;
-      case 'Marked': sql = this._buildMarkedSQL(); break;
-      case 'Open': sql = this._buildOpenSQL(); break;
-      case 'Archived': sql = this._buildArchivedSQL(); break;
+      case "Inbox":
+        sql = this._buildInboxSQL();
+        break;
+      case "Unread":
+        sql = this._buildUnreadSQL();
+        break;
+      case "Marked":
+        sql = this._buildMarkedSQL();
+        break;
+      case "Open":
+        sql = this._buildOpenSQL();
+        break;
+      case "Archived":
+        sql = this._buildArchivedSQL();
+        break;
     }
 
     let issues;
@@ -23,12 +38,21 @@ export class LibraryIssue {
     const extraCondition = IssueFilter.buildCondition(filterQuery);
     if (extraCondition.filter) {
       // hack
-      sql.issuesQuery = sql.issuesQuery.replace('where', `where ${extraCondition.filter} and`);
-      sql.countQuery = sql.countQuery.replace('where', `where ${extraCondition.filter} and`);
+      sql.issuesQuery = sql.issuesQuery.replace(
+        "where",
+        `where ${extraCondition.filter} and`
+      );
+      sql.countQuery = sql.countQuery.replace(
+        "where",
+        `where ${extraCondition.filter} and`
+      );
     }
     if (extraCondition.sort) {
       // hack
-      sql.issuesQuery = sql.issuesQuery.replace(/order by\s+[\w\s]+/m, `order by ${extraCondition.sort}\n`);
+      sql.issuesQuery = sql.issuesQuery.replace(
+        /order by\s+[\w\s]+/m,
+        `order by ${extraCondition.sort}\n`
+      );
     }
 
     issues = await DB.select(sql.issuesQuery + ` limit ${offset}, ${perPage}`);
@@ -49,37 +73,59 @@ export class LibraryIssue {
     totalCount = temp.count;
 
     const hasNextPage = offset + perPage < totalCount;
-    return {issues, totalCount, hasNextPage};
+    return { issues, totalCount, hasNextPage };
   }
 
   async findIssuesWithFunnel(libraryStreamName, funnelIssueIds) {
     let sql;
     switch (libraryStreamName) {
-      case 'Inbox': sql = this._buildInboxSQL(); break;
-      case 'Unread': sql = this._buildUnreadSQL(); break;
-      case 'Marked': sql = this._buildMarkedSQL(); break;
-      case 'Open': sql = this._buildOpenSQL(); break;
-      case 'Archived': sql = this._buildArchivedSQL(); break;
+      case "Inbox":
+        sql = this._buildInboxSQL();
+        break;
+      case "Unread":
+        sql = this._buildUnreadSQL();
+        break;
+      case "Marked":
+        sql = this._buildMarkedSQL();
+        break;
+      case "Open":
+        sql = this._buildOpenSQL();
+        break;
+      case "Archived":
+        sql = this._buildArchivedSQL();
+        break;
     }
 
     // hack: sql replace
-    const cond = `where t1.id in (${funnelIssueIds.join(',')}) and`;
-    const query = sql.issuesQuery.replace('where', cond);
+    const cond = `where t1.id in (${funnelIssueIds.join(",")}) and`;
+    const query = sql.issuesQuery.replace("where", cond);
     return await DB.select(query, null, true);
   }
 
   async readAll(streamName) {
     let sql;
     switch (streamName) {
-      case 'Inbox': sql = this._buildInboxSQL(); break;
-      case 'Unread': sql = this._buildUnreadSQL(); break;
-      case 'Marked': sql = this._buildMarkedSQL(); break;
-      case 'Open': sql = this._buildOpenSQL(); break;
-      case 'Archived': sql = this._buildArchivedSQL(); break;
+      case "Inbox":
+        sql = this._buildInboxSQL();
+        break;
+      case "Unread":
+        sql = this._buildUnreadSQL();
+        break;
+      case "Marked":
+        sql = this._buildMarkedSQL();
+        break;
+      case "Open":
+        sql = this._buildOpenSQL();
+        break;
+      case "Archived":
+        sql = this._buildArchivedSQL();
+        break;
     }
 
     const date = new Date();
-    const readAt = moment(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
+    const readAt = moment(date)
+      .utc()
+      .format("YYYY-MM-DDTHH:mm:ss[Z]");
     await DB.exec(sql.readQuery, [readAt]);
   }
 
@@ -121,7 +167,7 @@ export class LibraryIssue {
         and id in (select issue_id from streams_issues)
     `;
 
-    return {issuesQuery, countQuery, readQuery};
+    return { issuesQuery, countQuery, readQuery };
   }
 
   _buildUnreadSQL() {
@@ -164,7 +210,7 @@ export class LibraryIssue {
         and id in (select issue_id from streams_issues)
     `;
 
-    return {issuesQuery, countQuery, readQuery};
+    return { issuesQuery, countQuery, readQuery };
   }
 
   _buildMarkedSQL() {
@@ -208,7 +254,7 @@ export class LibraryIssue {
         and id in (select issue_id from streams_issues)
     `;
 
-    return {issuesQuery, countQuery, readQuery};
+    return { issuesQuery, countQuery, readQuery };
   }
 
   _buildOpenSQL() {
@@ -251,7 +297,7 @@ export class LibraryIssue {
         and id in (select issue_id from streams_issues)
     `;
 
-    return {issuesQuery, countQuery, readQuery};
+    return { issuesQuery, countQuery, readQuery };
   }
 
   _buildArchivedSQL() {
@@ -292,7 +338,7 @@ export class LibraryIssue {
         and id in (select issue_id from streams_issues)
     `;
 
-    return {issuesQuery, countQuery, readQuery};
+    return { issuesQuery, countQuery, readQuery };
   }
 }
 

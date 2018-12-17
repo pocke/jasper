@@ -1,6 +1,6 @@
-import Config from '../Config';
-import Timer from '../Util/Timer';
-import Identifier from '../Util/Identifier';
+import Config from "../Config";
+import Timer from "../Util/Timer";
+import Identifier from "../Util/Identifier";
 
 export class GitHubClientDeliver {
   constructor() {
@@ -10,14 +10,14 @@ export class GitHubClientDeliver {
   }
 
   push(callback, name = null) {
-    return new Promise((resolve, reject)=>{
+    return new Promise((resolve, reject) => {
       this._callbacks.push([callback, resolve, reject, name]);
       if (!this._running) this._run();
     });
   }
 
   pushImmediate(callback, name = null) {
-    return new Promise((resolve, reject)=>{
+    return new Promise((resolve, reject) => {
       this._immediateCallbacks.push([callback, resolve, reject, name]);
       if (!this._immediateRunning) this._immediateRun();
     });
@@ -32,15 +32,15 @@ export class GitHubClientDeliver {
   }
 
   cancel(name) {
-    const callbacks = this._callbacks.filter((item)=> item[3] !== name);
+    const callbacks = this._callbacks.filter(item => item[3] !== name);
     this._callbacks.length = 0;
     this._callbacks.push(...callbacks);
   }
 
   async _run() {
-    const running = this._running = `running:${Identifier.getId()}`;
+    const running = (this._running = `running:${Identifier.getId()}`);
     const interval = Config.apiInterval * 1000;
-    while(1) {
+    while (1) {
       if (running !== this._running) break;
 
       if (this._callbacks.length > 0) {
@@ -58,8 +58,8 @@ export class GitHubClientDeliver {
   }
 
   async _immediateRun() {
-    const running = this._immediateRunning = `running:${Identifier.getId()}`;
-    while(1) {
+    const running = (this._immediateRunning = `running:${Identifier.getId()}`);
+    while (1) {
       if (running !== this._immediateRunning) break;
       if (!this._immediateCallbacks.length) break;
 
@@ -76,4 +76,4 @@ export class GitHubClientDeliver {
   }
 }
 
-export default new GitHubClientDeliver()
+export default new GitHubClientDeliver();

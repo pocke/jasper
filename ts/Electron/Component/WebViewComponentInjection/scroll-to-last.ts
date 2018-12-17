@@ -1,7 +1,11 @@
-(function(){
+(function() {
   const prevReadAt = _prevReadAt_;
   const updatedBody = _updatedBody_;
-  const els = Array.from(document.querySelectorAll('.timeline-comment, .review-comment, .discussion-item-review'));
+  const els = Array.from(
+    document.querySelectorAll(
+      ".timeline-comment, .review-comment, .discussion-item-review"
+    )
+  );
 
   // remove description and text area
   els.shift();
@@ -11,10 +15,12 @@
 
   let target;
   for (const el of els) {
-    const timeEl = el.querySelector('.timestamp relative-time, .timestamp time');
+    const timeEl = el.querySelector(
+      ".timestamp relative-time, .timestamp time"
+    );
     if (!timeEl) continue;
 
-    const time = new Date(timeEl.getAttribute('datetime')).getTime();
+    const time = new Date(timeEl.getAttribute("datetime")).getTime();
     if (time > prevReadAt) {
       target = el;
       break;
@@ -32,17 +38,18 @@
   }
 
   if (target) {
-    getParent(target, 'js-timeline-item').scrollIntoView();
+    getParent(target, "js-timeline-item").scrollIntoView();
     if (updatedBody) {
-      const scrollEl = document.createElement('div');
-      scrollEl.className = 'scroll-to-top';
-      scrollEl.textContent = 'This issue body was updated. Click here to scroll to top.';
-      scrollEl.addEventListener('click', ()=>{
+      const scrollEl = document.createElement("div");
+      scrollEl.className = "scroll-to-top";
+      scrollEl.textContent =
+        "This issue body was updated. Click here to scroll to top.";
+      scrollEl.addEventListener("click", () => {
         window.scrollTo(0, 0);
-        document.querySelector('.diff-body > div').style.display = 'block';
-        console.log('OPEN_DIFF_BODY:');
+        document.querySelector(".diff-body > div").style.display = "block";
+        console.log("OPEN_DIFF_BODY:");
       });
-      document.querySelector('.js-discussion').appendChild(scrollEl);
+      document.querySelector(".js-discussion").appendChild(scrollEl);
     }
   } else if (updatedBody) {
     // no scroll

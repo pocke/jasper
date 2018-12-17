@@ -1,9 +1,9 @@
-import Platform from './Util/Platform';
+import Platform from "./Util/Platform";
 
 export default class BrowserViewProxy {
   static setBrowserView(browserView) {
-    browserView.setAutoResize({width: true, height: true});
-    browserView.setBackgroundColor('#fff');
+    browserView.setAutoResize({ width: true, height: true });
+    browserView.setBackgroundColor("#fff");
 
     this._hide = false;
     this._browserView = browserView;
@@ -11,7 +11,7 @@ export default class BrowserViewProxy {
     this._layout = null;
     this._zoomFactor = 1;
 
-    this.setLayout('three');
+    this.setLayout("three");
   }
 
   static openDevTools(options) {
@@ -93,18 +93,38 @@ export default class BrowserViewProxy {
     if (Platform.isLinux()) height += 22; // menu bar height?
 
     if (this._layout === layout) {
-      this.setBounds({x: 521, y: 43, width: width - 521, height: height - 43 - 40});
+      this.setBounds({
+        x: 521,
+        y: 43,
+        width: width - 521,
+        height: height - 43 - 40
+      });
       this._layout = null;
     } else {
       switch (layout) {
-        case 'single':
-          this.setBounds({x: 1, y: 43, width: width - 1, height: height - 43 - 40});
+        case "single":
+          this.setBounds({
+            x: 1,
+            y: 43,
+            width: width - 1,
+            height: height - 43 - 40
+          });
           break;
-        case 'two':
-          this.setBounds({x: 301, y: 43, width: width - 301, height: height - 43 - 40});
+        case "two":
+          this.setBounds({
+            x: 301,
+            y: 43,
+            width: width - 301,
+            height: height - 43 - 40
+          });
           break;
-        case 'three':
-          this.setBounds({x: 521, y: 43, width: width - 521, height: height - 43 - 40});
+        case "three":
+          this.setBounds({
+            x: 521,
+            y: 43,
+            width: width - 521,
+            height: height - 43 - 40
+          });
           break;
       }
       this._layout = layout;
@@ -119,7 +139,7 @@ export default class BrowserViewProxy {
     const width = this._bounds.width + (this._bounds.x - x);
     const height = this._bounds.height + (this._bounds.y - y);
 
-    this._browserView.setBounds({x, y, width, height});
+    this._browserView.setBounds({ x, y, width, height });
   }
 
   static setZoomFactor(factor) {
@@ -134,7 +154,12 @@ export default class BrowserViewProxy {
     this._hide = enable;
 
     if (enable) {
-      this._browserView.setBounds({x: 9999, y: this._bounds.y, width: this._bounds.width, height: this._bounds.height});
+      this._browserView.setBounds({
+        x: 9999,
+        y: this._bounds.y,
+        width: this._bounds.width,
+        height: this._bounds.height
+      });
     } else {
       const layout = this._layout;
       this._layout = null;

@@ -1,5 +1,5 @@
-import Config from '../Config';
-import Stream from './Stream';
+import Config from "../Config";
+import Stream from "./Stream";
 
 export default class SystemMeStream extends Stream {
   constructor(id, name, searchedAt) {

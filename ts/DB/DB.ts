@@ -1,10 +1,10 @@
-import events from 'events';
-import Logger from 'color-logger';
-import sqlite3 from 'sqlite3';
-import Config from '../Config';
+import events from "events";
+import Logger from "color-logger";
+import sqlite3 from "sqlite3";
+import Config from "../Config";
 
 const EVENT_NAMES = {
-  EXEC_DONE: 'exec_done'
+  EXEC_DONE: "exec_done"
 };
 
 export class DB {
@@ -26,14 +26,14 @@ export class DB {
   }
 
   exec(sql, params = null) {
-    return new Promise((resolve, reject)=> {
+    return new Promise((resolve, reject) => {
       if (params) {
-        this._sqlite.run(sql, ...params, (error, row)=> {
+        this._sqlite.run(sql, ...params, (error, row) => {
           error ? reject(error) : resolve(row);
           this.emitExecDone(sql, params);
         });
       } else {
-        this._sqlite.run(sql, (error, row)=> {
+        this._sqlite.run(sql, (error, row) => {
           error ? reject(error) : resolve(row);
           this.emitExecDone(sql, params);
         });
@@ -43,34 +43,36 @@ export class DB {
 
   select(sql, params = null, suppressSlowQueryLog = false) {
     const start = Date.now();
-    return new Promise((resolve, reject)=>{
+    return new Promise((resolve, reject) => {
       if (params) {
-        this._sqlite.all(sql, ...params, (error, row)=>{
+        this._sqlite.all(sql, ...params, (error, row) => {
           error ? reject(error) : resolve(row || []);
 
           const time = Date.now() - start;
-          if (!suppressSlowQueryLog && time > 200) Logger.w('[slow query]', `${time}ms`, sql);
+          if (!suppressSlowQueryLog && time > 200)
+            Logger.w("[slow query]", `${time}ms`, sql);
         });
       } else {
-        this._sqlite.all(sql, (error, row)=>{
+        this._sqlite.all(sql, (error, row) => {
           error ? reject(error) : resolve(row || []);
 
           // slow query
           const time = Date.now() - start;
-          if (!suppressSlowQueryLog && time > 200) Logger.w('[slow query]', `${time}ms`, sql);
+          if (!suppressSlowQueryLog && time > 200)
+            Logger.w("[slow query]", `${time}ms`, sql);
         });
       }
     });
   }
 
   selectSingle(sql, params = null) {
-    return new Promise((resolve, reject)=>{
+    return new Promise((resolve, reject) => {
       if (params) {
-        this._sqlite.get(sql, ...params, (error, row)=>{
+        this._sqlite.get(sql, ...params, (error, row) => {
           error ? reject(error) : resolve(row);
         });
       } else {
-        this._sqlite.get(sql, (error, row)=>{
+        this._sqlite.get(sql, (error, row) => {
           error ? reject(error) : resolve(row);
         });
       }
@@ -86,7 +88,8 @@ export class DB {
   removeListeners(ids) {
     for (const id of ids) {
       const callback = this._callbacks[id];
-      if (callback) this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
+      if (callback)
+        this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
       delete this._callbacks[id];
     }
   }
@@ -100,8 +103,8 @@ export class DB {
   }
 
   close() {
-    return new Promise((resolve, reject)=>{
-      this._sqlite.close((error)=> error ? reject(error) : resolve());
+    return new Promise((resolve, reject) => {
+      this._sqlite.close(error => (error ? reject(error) : resolve()));
     });
   }
 }

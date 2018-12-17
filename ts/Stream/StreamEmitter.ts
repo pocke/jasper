@@ -1,8 +1,8 @@
-import events from 'events';
+import events from "events";
 
 const EVENT_NAMES = {
-  UPDATE_STREAM: 'update_stream',
-  RESTART_ALL_STREAMS: 'restart_all_streams'
+  UPDATE_STREAM: "update_stream",
+  RESTART_ALL_STREAMS: "restart_all_streams"
 };
 
 export class StreamEmitter {
@@ -21,7 +21,8 @@ export class StreamEmitter {
   removeListeners(ids) {
     for (const id of ids) {
       const callback = this._callbacks[id];
-      if (callback) this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
+      if (callback)
+        this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
       delete this._callbacks[id];
     }
   }

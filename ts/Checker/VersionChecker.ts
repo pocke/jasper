@@ -1,9 +1,9 @@
-import semver from 'semver';
-import electron from 'electron';
-import https from 'https';
-import Logger from 'color-logger';
-import Timer from '../Util/Timer';
-import Platform from '../Util/Platform';
+import semver from "semver";
+import electron from "electron";
+import https from "https";
+import Logger from "color-logger";
+import Timer from "../Util/Timer";
+import Platform from "../Util/Platform";
 
 export class VersionChecker {
   constructor() {
@@ -14,12 +14,12 @@ export class VersionChecker {
     const runningId = Date.now();
     this._runningIds.push(runningId);
 
-    while(1) {
+    while (1) {
       if (!this._runningIds.includes(runningId)) return;
 
       const latestVersion = await this.check();
       if (latestVersion) {
-        mainWindow.webContents.send('update-version', latestVersion);
+        mainWindow.webContents.send("update-version", latestVersion);
       }
       await Timer.sleep(3600 * 1000);
     }
@@ -52,43 +52,43 @@ export class VersionChecker {
   }
 
   _fetchVersions() {
-    return new Promise((resolve, reject)=>{
-
+    return new Promise((resolve, reject) => {
       let url;
       if (Platform.isMac()) {
-        url = 'https://jasperapp.io/-/versions-mac.json';
+        url = "https://jasperapp.io/-/versions-mac.json";
       } else if (Platform.isWin()) {
-        url = 'https://jasperapp.io/-/versions-windows.json';
+        url = "https://jasperapp.io/-/versions-windows.json";
       } else if (Platform.isLinux()) {
-        url = 'https://jasperapp.io/-/versions-linux.json';
+        url = "https://jasperapp.io/-/versions-linux.json";
       } else {
         reject(new Error(`unknown platform: ${Platform.name()}`));
         return;
       }
 
-      https.get(url, (res) => {
-        const statusCode = res.statusCode;
-        let body = '';
-        res.on('data', (chunk) => body += chunk.toString());
+      https
+        .get(url, res => {
+          const statusCode = res.statusCode;
+          let body = "";
+          res.on("data", chunk => (body += chunk.toString()));
 
-        res.on('end', ()=> {
-          if (statusCode !== 200) {
-            reject(new Error(body));
-            return;
-          }
+          res.on("end", () => {
+            if (statusCode !== 200) {
+              reject(new Error(body));
+              return;
+            }
 
-          try {
-            body = JSON.parse(body);
-            resolve(body);
-          } catch (e) {
-            reject(new Error(body));
-          }
+            try {
+              body = JSON.parse(body);
+              resolve(body);
+            } catch (e) {
+              reject(new Error(body));
+            }
+          });
+        })
+        .on("error", e => {
+          console.error(e);
+          reject(e);
         });
-
-      }).on('error', (e) => {
-        console.error(e);
-        reject(e);
-      });
     });
   }
 }

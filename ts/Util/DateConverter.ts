@@ -1,12 +1,17 @@
-import moment from 'moment';
+import moment from "moment";
 
 export class DateConverter {
   utcToUnix(utc) {
-    return moment.utc(utc).toDate().getTime();
+    return moment
+      .utc(utc)
+      .toDate()
+      .getTime();
   }
 
   localToUTCString(date) {
-    return moment(date).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
+    return moment(date)
+      .utc()
+      .format("YYYY-MM-DDTHH:mm:ss[Z]");
   }
 
   localToString(d) {

@@ -1,10 +1,10 @@
-import events from 'events';
+import events from "events";
 
 const EVENT_NAMES = {
-  OPEN_ACCOUNT_SETTING: 'open_account_setting',
-  CLOSE_ACCOUNT_SETTING: 'close_account_setting',
-  CREATE_ACCOUNT: 'create_account',
-  REWRITE_ACCOUNT: 'rewrite_account'
+  OPEN_ACCOUNT_SETTING: "open_account_setting",
+  CLOSE_ACCOUNT_SETTING: "close_account_setting",
+  CREATE_ACCOUNT: "create_account",
+  REWRITE_ACCOUNT: "rewrite_account"
 };
 
 /**
@@ -26,7 +26,8 @@ export class AccountEmitter {
   removeListeners(ids) {
     for (const id of ids) {
       const callback = this._callbacks[id];
-      if (callback) this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
+      if (callback)
+        this._eventEmitter.removeListener(EVENT_NAMES.SELECT_STREAM, callback);
       delete this._callbacks[id];
     }
   }

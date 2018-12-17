@@ -6,10 +6,9 @@ export class GitHubQueryParser {
 
   takeMismatchIssues(query, issues) {
     // todo: check with negativeMap
-    const {positive: positiveMap, negative: negativeMap} = this.parse(query);
+    const { positive: positiveMap, negative: negativeMap } = this.parse(query);
     const mismatchIssues = [];
     for (const issue of issues) {
-
       if (positiveMap.is.open) {
         if (issue.closed_at) {
           mismatchIssues.push(issue);
@@ -27,12 +26,14 @@ export class GitHubQueryParser {
       if (positiveMap.assignees.length) {
         let names = [];
         if (issue.assignees) {
-          names = issue.assignees.map((assignee) => assignee.login.toLowerCase());
+          names = issue.assignees.map(assignee => assignee.login.toLowerCase());
         } else if (issue.assignee) {
           names = [issue.assignee.login.toLowerCase()];
         }
 
-        const res = positiveMap.assignees.some((assignee) => names.includes(assignee));
+        const res = positiveMap.assignees.some(assignee =>
+          names.includes(assignee)
+        );
         if (!res) {
           mismatchIssues.push(issue);
           continue;
@@ -40,8 +41,8 @@ export class GitHubQueryParser {
       }
 
       if (positiveMap.labels.length) {
-        const names = issue.labels.map((label) => label.name.toLowerCase());
-        const res = positiveMap.labels.every((label) => names.includes(label));
+        const names = issue.labels.map(label => label.name.toLowerCase());
+        const res = positiveMap.labels.every(label => names.includes(label));
         if (!res) {
           mismatchIssues.push(issue);
           continue;
@@ -49,7 +50,10 @@ export class GitHubQueryParser {
       }
 
       if (positiveMap.milestones.length) {
-        const res = positiveMap.milestones.some((milestone) => issue.milestone && issue.milestone.title.toLowerCase() === milestone);
+        const res = positiveMap.milestones.some(
+          milestone =>
+            issue.milestone && issue.milestone.title.toLowerCase() === milestone
+        );
         if (!res) {
           mismatchIssues.push(issue);
           continue;
@@ -90,18 +94,42 @@ export class GitHubQueryParser {
       const _tokenMap = not ? negativeTokenMap : positiveTokenMap;
 
       switch (key) {
-        case 'number':    _tokenMap.numbers.push(value); break;
-        case 'is':        _tokenMap.is[value] = true; break;
-        case 'type':      _tokenMap.is[value] = true; break;
-        case 'author':    _tokenMap.authors.push(value.toLowerCase()); break;
-        case 'assignee':  _tokenMap.assignees.push(value.toLowerCase()); break;
-        case 'user':      _tokenMap.users.push(value.toLowerCase()); break;
-        case 'org':       _tokenMap.users.push(value.toLowerCase()); break;
-        case 'repo':      _tokenMap.repos.push(value.toLowerCase()); break;
-        case 'label':     _tokenMap.labels.push(value.toLowerCase()); break;
-        case 'milestone': _tokenMap.milestones.push(value.toLowerCase()); break;
-        case 'no':        _tokenMap.no[value] = true; break;
-        case 'have':      _tokenMap.have[value] = true; break;
+        case "number":
+          _tokenMap.numbers.push(value);
+          break;
+        case "is":
+          _tokenMap.is[value] = true;
+          break;
+        case "type":
+          _tokenMap.is[value] = true;
+          break;
+        case "author":
+          _tokenMap.authors.push(value.toLowerCase());
+          break;
+        case "assignee":
+          _tokenMap.assignees.push(value.toLowerCase());
+          break;
+        case "user":
+          _tokenMap.users.push(value.toLowerCase());
+          break;
+        case "org":
+          _tokenMap.users.push(value.toLowerCase());
+          break;
+        case "repo":
+          _tokenMap.repos.push(value.toLowerCase());
+          break;
+        case "label":
+          _tokenMap.labels.push(value.toLowerCase());
+          break;
+        case "milestone":
+          _tokenMap.milestones.push(value.toLowerCase());
+          break;
+        case "no":
+          _tokenMap.no[value] = true;
+          break;
+        case "have":
+          _tokenMap.have[value] = true;
+          break;
         default:
           if (key && value) {
             _tokenMap[key] = _tokenMap[key] || [];
@@ -112,26 +140,26 @@ export class GitHubQueryParser {
       }
     }
 
-    return {positive: positiveTokenMap, negative: negativeTokenMap};
+    return { positive: positiveTokenMap, negative: negativeTokenMap };
   }
 
   _lexical(query) {
     const results = [];
     let str = [];
-    let state = 'normal';
+    let state = "normal";
     for (const c of query.trim()) {
-      if (state === 'normal' && c === '"') {
-        state = 'phrase';
+      if (state === "normal" && c === '"') {
+        state = "phrase";
         continue;
       }
 
-      if (state === 'phrase' && c === '"') {
-        state = 'normal';
+      if (state === "phrase" && c === '"') {
+        state = "normal";
         continue;
       }
 
-      if (c === ' ' && state === 'normal') {
-        results.push(str.join(''));
+      if (c === " " && state === "normal") {
+        results.push(str.join(""));
         str = [];
         continue;
       }
@@ -139,7 +167,7 @@ export class GitHubQueryParser {
       str.push(c);
     }
 
-    results.push(str.join(''));
+    results.push(str.join(""));
 
     return results;
   }

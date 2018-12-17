@@ -1,11 +1,11 @@
-import fs from 'fs-extra';
+import fs from "fs-extra";
 
 export class File {
   isExist(path) {
     try {
       fs.readFileSync(path);
       return true;
-    } catch(e) {
+    } catch (e) {
       return false;
     }
   }

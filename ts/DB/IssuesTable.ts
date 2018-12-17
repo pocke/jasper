@@ -1,5 +1,5 @@
-import Config from '../Config';
-import DB from './DB';
+import Config from "../Config";
+import DB from "./DB";
 
 export class IssuesTable {
   async unreadCount() {
@@ -21,7 +21,7 @@ export class IssuesTable {
     const updatedIds = [];
 
     for (const issue of issues) {
-      const paths = issue.url.split('/').reverse();
+      const paths = issue.url.split("/").reverse();
       const user = paths[3];
       const repo = `${paths[3]}/${paths[2]}`;
 
@@ -33,10 +33,13 @@ export class IssuesTable {
         }
       }
 
-      const currentIssue = await DB.selectSingle('select * from issues where id = ?', [issue.id]);
+      const currentIssue = await DB.selectSingle(
+        "select * from issues where id = ?",
+        [issue.id]
+      );
       const params = [
         issue.id,
-        issue.pull_request ? 'pr' : 'issue',
+        issue.pull_request ? "pr" : "issue",
         issue.title,
         issue.created_at,
         issue.updated_at,
@@ -46,8 +49,14 @@ export class IssuesTable {
         user,
         repo,
         issue.user.login, // author
-        issue.assignees.length ? issue.assignees.map((assignee)=> `<<<<${assignee.login}>>>>`).join('') : null, // hack: assignees format
-        issue.labels.length ? issue.labels.map((label)=> `<<<<${label.name}>>>>`).join('') : null, // hack: labels format
+        issue.assignees.length
+          ? issue.assignees
+              .map(assignee => `<<<<${assignee.login}>>>>`)
+              .join("")
+          : null, // hack: assignees format
+        issue.labels.length
+          ? issue.labels.map(label => `<<<<${label.name}>>>>`).join("")
+          : null, // hack: labels format
         issue.milestone ? issue.milestone.title : null,
         issue.milestone ? issue.milestone.due_on : null,
         issue.html_url,
@@ -56,7 +65,8 @@ export class IssuesTable {
       ];
 
       if (currentIssue) {
-        await DB.exec(`
+        await DB.exec(
+          `
           update
             issues
           set
@@ -80,11 +90,15 @@ export class IssuesTable {
             value = ?
           where
             id = ${issue.id}
-        `, params);
+        `,
+          params
+        );
 
-        if (issue.updated_at > currentIssue.updated_at) updatedIds.push(issue.id);
+        if (issue.updated_at > currentIssue.updated_at)
+          updatedIds.push(issue.id);
       } else {
-        await DB.exec(`
+        await DB.exec(
+          `
           insert into
             issues
             (
@@ -109,7 +123,9 @@ export class IssuesTable {
             )
           values
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, params);
+        `,
+          params
+        );
 
         if (!defaultReadAt) updatedIds.push(issue.id);
       }

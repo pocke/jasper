@@ -1,34 +1,39 @@
-import electron from 'electron';
-import * as React from 'react';
-import ReactDOM from 'react-dom';
-import moment from 'moment';
-import SystemStreamEmitter from '../SystemStreamEmitter';
-import StreamEmitter from '../StreamEmitter';
-import LibraryStreamEmitter from '../LibraryStreamEmitter';
-import IssueCenter from '../IssueCenter';
-import IssueEmitter from '../IssueEmitter';
-import SystemStreamCenter from '../SystemStreamCenter';
-import StreamCenter from '../StreamCenter';
-import WebViewEmitter from '../WebViewEmitter';
-import FilterHistoryCenter from '../FilterHistoryCenter';
-import Color from '../../Util/Color';
+import electron from "electron";
+import * as React from "react";
+import ReactDOM from "react-dom";
+import moment from "moment";
+import SystemStreamEmitter from "../SystemStreamEmitter";
+import StreamEmitter from "../StreamEmitter";
+import LibraryStreamEmitter from "../LibraryStreamEmitter";
+import IssueCenter from "../IssueCenter";
+import IssueEmitter from "../IssueEmitter";
+import SystemStreamCenter from "../SystemStreamCenter";
+import StreamCenter from "../StreamCenter";
+import WebViewEmitter from "../WebViewEmitter";
+import FilterHistoryCenter from "../FilterHistoryCenter";
+import Color from "../../Util/Color";
 
 const remote = electron.remote;
-const Timer = remote.require('./Util/Timer.js').default;
-const Config = remote.require('./Config.js').default;
-const GA = remote.require('./Util/GA').default;
+const Timer = remote.require("./Util/Timer.js").default;
+const Config = remote.require("./Config.js").default;
+const GA = remote.require("./Util/GA").default;
 
 export default class IssuesComponent extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {issues: [], waitForLoadingIssueIds: [], fadeInIssueIds: [], filterHistories: []};
+    this.state = {
+      issues: [],
+      waitForLoadingIssueIds: [],
+      fadeInIssueIds: [],
+      filterHistories: []
+    };
     this._streamId = null;
     this._streamName = null;
     this._libraryStreamName = null;
     this._currentIssueId = null;
     this._filterQuery = null;
     this._nowLoadingIssues = false;
-    this._filterSelection = 'updated';
+    this._filterSelection = "updated";
 
     this._pageNumber = 0;
     this._totalCount = 0;
@@ -45,27 +50,29 @@ export default class IssuesComponent extends React.Component {
   componentDidMount() {
     {
       let id;
-      id = SystemStreamEmitter.addSelectStreamListener((stream)=>{
+      id = SystemStreamEmitter.addSelectStreamListener(stream => {
         this._streamName = stream.name;
         this._streamId = stream.id;
         this._libraryStreamName = null;
         this._currentIssueId = null;
         this._pageNumber = 0;
         this._filterQuery = null;
-        ReactDOM.findDOMNode(this).querySelector('#filterInput').value = '';
+        ReactDOM.findDOMNode(this).querySelector("#filterInput").value = "";
         this._loadIssues();
       });
       this._systemStreamListenerId.push(id);
 
-      id = SystemStreamEmitter.addUpdateStreamListener((streamId, updateIssueIds)=>{
-        this._mergeWaitForLoadingIssueIds('system', streamId, updateIssueIds);
-      });
+      id = SystemStreamEmitter.addUpdateStreamListener(
+        (streamId, updateIssueIds) => {
+          this._mergeWaitForLoadingIssueIds("system", streamId, updateIssueIds);
+        }
+      );
       this._systemStreamListenerId.push(id);
     }
 
     {
       let id;
-      id = StreamEmitter.addSelectStreamListener((stream, filteredStream)=>{
+      id = StreamEmitter.addSelectStreamListener((stream, filteredStream) => {
         const filter = filteredStream ? filteredStream.filter : null;
         this._streamName = stream.name;
         this._streamId = stream.id;
@@ -73,34 +80,40 @@ export default class IssuesComponent extends React.Component {
         this._currentIssueId = null;
         this._pageNumber = 0;
         this._filterQuery = filter;
-        ReactDOM.findDOMNode(this).querySelector('#filterInput').value = filter;
+        ReactDOM.findDOMNode(this).querySelector("#filterInput").value = filter;
         this._loadIssues();
       });
       this._streamListenerId.push(id);
 
-      id = StreamEmitter.addUpdateStreamListener((streamId, updateIssueIds)=>{
-        this._mergeWaitForLoadingIssueIds('stream', streamId, updateIssueIds);
+      id = StreamEmitter.addUpdateStreamListener((streamId, updateIssueIds) => {
+        this._mergeWaitForLoadingIssueIds("stream", streamId, updateIssueIds);
       });
       this._streamListenerId.push(id);
     }
 
     {
       let id;
-      id = LibraryStreamEmitter.addSelectStreamListener((streamName)=>{
+      id = LibraryStreamEmitter.addSelectStreamListener(streamName => {
         this._streamName = streamName;
         this._streamId = null;
         this._libraryStreamName = streamName;
         this._currentIssueId = null;
         this._pageNumber = 0;
         this._filterQuery = null;
-        ReactDOM.findDOMNode(this).querySelector('#filterInput').value = '';
+        ReactDOM.findDOMNode(this).querySelector("#filterInput").value = "";
         this._loadIssues();
       });
       this._libraryStreamListenerId.push(id);
 
-      id = LibraryStreamEmitter.addUpdateStreamListener((streamName, updateIssueIds)=>{
-        this._mergeWaitForLoadingIssueIds('library', streamName, updateIssueIds);
-      });
+      id = LibraryStreamEmitter.addUpdateStreamListener(
+        (streamName, updateIssueIds) => {
+          this._mergeWaitForLoadingIssueIds(
+            "library",
+            streamName,
+            updateIssueIds
+          );
+        }
+      );
       this._libraryStreamListenerId.push(id);
     }
 
@@ -109,28 +122,39 @@ export default class IssuesComponent extends React.Component {
       id = IssueEmitter.addReadAllIssuesListener(this._loadIssues.bind(this));
       this._issueListenerIds.push(id);
 
-      id = IssueEmitter.addReadAllIssuesFromLibraryListener(this._loadIssues.bind(this));
+      id = IssueEmitter.addReadAllIssuesFromLibraryListener(
+        this._loadIssues.bind(this)
+      );
       this._issueListenerIds.push(id);
 
       id = IssueEmitter.addFocusIssueListener(this._handleClick.bind(this));
       this._issueListenerIds.push(id);
 
-      id = IssueEmitter.addReadIssueListener(this._updateSingleIssue.bind(this));
+      id = IssueEmitter.addReadIssueListener(
+        this._updateSingleIssue.bind(this)
+      );
       this._issueListenerIds.push(id);
 
-      id = IssueEmitter.addMarkIssueListener(this._updateSingleIssue.bind(this));
+      id = IssueEmitter.addMarkIssueListener(
+        this._updateSingleIssue.bind(this)
+      );
       this._issueListenerIds.push(id);
 
-      id = IssueEmitter.addArchiveIssueListener(this._updateSingleIssue.bind(this));
+      id = IssueEmitter.addArchiveIssueListener(
+        this._updateSingleIssue.bind(this)
+      );
       this._issueListenerIds.push(id);
     }
 
-    electron.ipcRenderer.on('command-issues', (ev, commandItem)=>{
+    electron.ipcRenderer.on("command-issues", (ev, commandItem) => {
       this._handleCommand(commandItem);
     });
 
     // hack: React onKeyDown can not handle shift + space key.
-    ReactDOM.findDOMNode(this).addEventListener('keydown', this._handleWebViewScroll.bind(this));
+    ReactDOM.findDOMNode(this).addEventListener(
+      "keydown",
+      this._handleWebViewScroll.bind(this)
+    );
 
     // hack
     this._initHandleFilterQuery();
@@ -151,17 +175,28 @@ export default class IssuesComponent extends React.Component {
     this._nowLoadingIssues = true;
 
     // hack: DOM operation
-    const list = ReactDOM.findDOMNode(this).querySelector('#issuesList');
+    const list = ReactDOM.findDOMNode(this).querySelector("#issuesList");
     list.style.opacity = 0.3;
 
     let filterSelectionQuery;
     switch (this._filterSelection) {
-      case 'created': filterSelectionQuery = 'sort:created'; break;
-      case 'updated': filterSelectionQuery = ''; break;
-      case 'closed': filterSelectionQuery = 'sort:closed'; break;
-      case 'read': filterSelectionQuery = 'sort:read'; break;
-      case 'dueon': filterSelectionQuery = 'is:open sort:dueon'; break;
-      default: filterSelectionQuery = '';
+      case "created":
+        filterSelectionQuery = "sort:created";
+        break;
+      case "updated":
+        filterSelectionQuery = "";
+        break;
+      case "closed":
+        filterSelectionQuery = "sort:closed";
+        break;
+      case "read":
+        filterSelectionQuery = "sort:read";
+        break;
+      case "dueon":
+        filterSelectionQuery = "is:open sort:dueon";
+        break;
+      default:
+        filterSelectionQuery = "";
     }
 
     let filterQuery;
@@ -172,14 +207,22 @@ export default class IssuesComponent extends React.Component {
     }
 
     if (Config.generalOnlyUnreadIssue) {
-      filterQuery += ' is:unread';
+      filterQuery += " is:unread";
     }
 
     let result;
     if (this._streamId !== null) {
-      result = await IssueCenter.findIssues(this._streamId, filterQuery, this._pageNumber);
+      result = await IssueCenter.findIssues(
+        this._streamId,
+        filterQuery,
+        this._pageNumber
+      );
     } else if (this._libraryStreamName) {
-      result = await IssueCenter.findIssuesFromLibrary(this._libraryStreamName, filterQuery, this._pageNumber);
+      result = await IssueCenter.findIssuesFromLibrary(
+        this._libraryStreamName,
+        filterQuery,
+        this._pageNumber
+      );
     }
 
     if (!result) return;
@@ -193,7 +236,7 @@ export default class IssuesComponent extends React.Component {
     this._totalCount = result.totalCount;
     this._hasNextPage = result.hasNextPage;
 
-    if (!result.issues.find((issue) => issue.id === this._currentIssueId)) {
+    if (!result.issues.find(issue => issue.id === this._currentIssueId)) {
       this._currentIssueId = null;
     }
 
@@ -211,12 +254,20 @@ export default class IssuesComponent extends React.Component {
 
   async _mergeWaitForLoadingIssueIds(type, streamIdOrName, updatedIssueIds) {
     let ids;
-    if (this._libraryStreamName && type === 'library' && this._libraryStreamName === streamIdOrName) {
+    if (
+      this._libraryStreamName &&
+      type === "library" &&
+      this._libraryStreamName === streamIdOrName
+    ) {
       ids = updatedIssueIds;
-    } else if (this._streamId !== null && type == 'system') {
+    } else if (this._streamId !== null && type == "system") {
       ids = await IssueCenter.includeIds(this._streamId, updatedIssueIds);
-    } else if (this._streamId !== null && type == 'stream') {
-      ids = await IssueCenter.includeIds(this._streamId, updatedIssueIds, this._filterQuery);
+    } else if (this._streamId !== null && type == "stream") {
+      ids = await IssueCenter.includeIds(
+        this._streamId,
+        updatedIssueIds,
+        this._filterQuery
+      );
     } else {
       return;
     }
@@ -226,13 +277,16 @@ export default class IssuesComponent extends React.Component {
       if (!waitForLoadingIssueIds.includes(id)) waitForLoadingIssueIds.push(id);
     }
 
-    this.setState({waitForLoadingIssueIds});
+    this.setState({ waitForLoadingIssueIds });
   }
 
   async _markIssue(issue, ev) {
     GA.eventIssueMark(!issue.marked_at);
     ev.stopPropagation();
-    issue = await IssueCenter.mark(issue.id, issue.marked_at ? null : new Date());
+    issue = await IssueCenter.mark(
+      issue.id,
+      issue.marked_at ? null : new Date()
+    );
     this._updateSingleIssue(issue);
   }
 
@@ -261,10 +315,10 @@ export default class IssuesComponent extends React.Component {
 
   _updateSingleIssue(issue) {
     const issues = this.state.issues;
-    const index = issues.findIndex((_issue) => _issue.id === issue.id);
+    const index = issues.findIndex(_issue => _issue.id === issue.id);
     if (index === -1) return;
     issues[index] = issue;
-    this.setState({issues});
+    this.setState({ issues });
   }
 
   async _unsubscribe(issue) {
@@ -282,10 +336,10 @@ export default class IssuesComponent extends React.Component {
     // hack: dom operation
     // クリックしてからすぐにissueのactive状態を切り替えるためにDOM操作してしまっている
     if (ev) {
-      const prevEl = ReactDOM.findDOMNode(this).querySelector('li.active');
-      if(prevEl) prevEl.classList.remove('active');
+      const prevEl = ReactDOM.findDOMNode(this).querySelector("li.active");
+      if (prevEl) prevEl.classList.remove("active");
       const el = ev.currentTarget;
-      el.classList.add('active');
+      el.classList.add("active");
     }
 
     this._currentIssueId = issue.id;
@@ -296,15 +350,15 @@ export default class IssuesComponent extends React.Component {
     if (this._handlingViKey) return;
     if (!this._currentIssueId) {
       const issue = this.state.issues[0];
-      const el = ReactDOM.findDOMNode(this).querySelector('.issue-list-item');
-      if (issue && el) this._handleClick(issue, {currentTarget: el});
+      const el = ReactDOM.findDOMNode(this).querySelector(".issue-list-item");
+      if (issue && el) this._handleClick(issue, { currentTarget: el });
       return;
     }
 
     this._handlingViKey = true;
     const issueId = this._currentIssueId;
     const issues = this.state.issues;
-    const index = issues.findIndex((_issue) => _issue.id === issueId);
+    const index = issues.findIndex(_issue => _issue.id === issueId);
     let nextIndex;
     if (skipReadIssue) {
       nextIndex = issues.findIndex((_issue, _index) => {
@@ -321,10 +375,12 @@ export default class IssuesComponent extends React.Component {
     }
 
     if (issues[nextIndex]) {
-      const currentEl = ReactDOM.findDOMNode(this).querySelector('li.active');
-      currentEl.classList.remove('active');
-      const nextEl = currentEl.parentElement.querySelectorAll('.issue-list-item')[nextIndex];
-      nextEl.classList.add('active');
+      const currentEl = ReactDOM.findDOMNode(this).querySelector("li.active");
+      currentEl.classList.remove("active");
+      const nextEl = currentEl.parentElement.querySelectorAll(
+        ".issue-list-item"
+      )[nextIndex];
+      nextEl.classList.add("active");
       nextEl.scrollIntoViewIfNeeded(false);
 
       await this._handleClick(issues[nextIndex]);
@@ -334,7 +390,10 @@ export default class IssuesComponent extends React.Component {
         this._handlingViKey = false;
         return;
       }
-      const nextIssue = direction === 1 ? this.state.issues[0] : this.state.issues[this.state.issues.length - 1];
+      const nextIssue =
+        direction === 1
+          ? this.state.issues[0]
+          : this.state.issues[this.state.issues.length - 1];
       await this._handleClick(nextIssue);
     }
 
@@ -342,7 +401,7 @@ export default class IssuesComponent extends React.Component {
   }
 
   _handleWebViewScroll(ev) {
-    if (!ev.target.classList.contains('issues')) return;
+    if (!ev.target.classList.contains("issues")) return;
     if (!this._currentIssueId) return;
 
     if (ev.keyCode === 32) {
@@ -357,118 +416,153 @@ export default class IssuesComponent extends React.Component {
     const shell = electron.shell;
 
     const menu = new remote.Menu();
-    menu.append(new MenuItem({
-      label: IssueCenter.isRead(issue) ? 'Mark as Unread' : 'Mark as Read',
-      click: this._unreadIssue.bind(this, issue)
-    }));
+    menu.append(
+      new MenuItem({
+        label: IssueCenter.isRead(issue) ? "Mark as Unread" : "Mark as Read",
+        click: this._unreadIssue.bind(this, issue)
+      })
+    );
 
-    menu.append(new MenuItem({
-      label: issue.archived_at ? 'UnArchive' : 'Archive',
-      click: this._archiveIssue.bind(this, issue)
-    }));
+    menu.append(
+      new MenuItem({
+        label: issue.archived_at ? "UnArchive" : "Archive",
+        click: this._archiveIssue.bind(this, issue)
+      })
+    );
 
     if (this._streamId === SystemStreamCenter.STREAM_ID_SUBSCRIPTION) {
-      menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(new MenuItem({ type: "separator" }));
 
-      menu.append(new MenuItem({
-        label: 'Unsubscribe',
-        click: this._unsubscribe.bind(this, issue)
-      }));
+      menu.append(
+        new MenuItem({
+          label: "Unsubscribe",
+          click: this._unsubscribe.bind(this, issue)
+        })
+      );
     }
 
     // mark current, mark all
     {
-      menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(new MenuItem({ type: "separator" }));
 
-      menu.append(new MenuItem({
-        label: 'Mark Current as Read',
-        click: async ()=>{
-          if (confirm('Would you like to mark current issues as read?')) {
-            const issueIds = this.state.issues.map((issue) => issue.id);
-            await IssueCenter.readIssues(issueIds);
-            this._loadIssues();
-            GA.eventIssueReadCurrent();
-          }
-        }
-      }));
-
-      if (this._streamId !== null) {
-        menu.append(new MenuItem({
-          label: 'Mark All as Read',
-          click: async ()=>{
-            if (confirm(`Would you like to mark "${this._streamName}" all as read?`)) {
-              await IssueCenter.readAll(this._streamId);
+      menu.append(
+        new MenuItem({
+          label: "Mark Current as Read",
+          click: async () => {
+            if (confirm("Would you like to mark current issues as read?")) {
+              const issueIds = this.state.issues.map(issue => issue.id);
+              await IssueCenter.readIssues(issueIds);
               this._loadIssues();
-              GA.eventIssueReadAll();
+              GA.eventIssueReadCurrent();
             }
           }
-        }));
+        })
+      );
+
+      if (this._streamId !== null) {
+        menu.append(
+          new MenuItem({
+            label: "Mark All as Read",
+            click: async () => {
+              if (
+                confirm(
+                  `Would you like to mark "${this._streamName}" all as read?`
+                )
+              ) {
+                await IssueCenter.readAll(this._streamId);
+                this._loadIssues();
+                GA.eventIssueReadAll();
+              }
+            }
+          })
+        );
       }
 
       if (this._libraryStreamName) {
-        menu.append(new MenuItem({
-          label: 'Mark All as Read',
-          click: async ()=>{
-            if (confirm(`Would you like to mark "${this._streamName}" all as read?`)) {
-              await IssueCenter.readAllFromLibrary(this._libraryStreamName);
-              this._loadIssues();
+        menu.append(
+          new MenuItem({
+            label: "Mark All as Read",
+            click: async () => {
+              if (
+                confirm(
+                  `Would you like to mark "${this._streamName}" all as read?`
+                )
+              ) {
+                await IssueCenter.readAllFromLibrary(this._libraryStreamName);
+                this._loadIssues();
+              }
             }
-          }
-        }));
+          })
+        );
       }
     }
 
     // create filter
     if (this._filterQuery && this._streamId && this._streamId >= 0) {
-      menu.append(new MenuItem({ type: 'separator' }));
-      menu.append(new MenuItem({
-        label: 'Create Filter',
-        click: async ()=>{
-          const stream = await StreamCenter.findStream(this._streamId);
-          StreamEmitter.emitOpenFilteredStreamSetting(stream, this._filterQuery);
-        }
-      }));
+      menu.append(new MenuItem({ type: "separator" }));
+      menu.append(
+        new MenuItem({
+          label: "Create Filter",
+          click: async () => {
+            const stream = await StreamCenter.findStream(this._streamId);
+            StreamEmitter.emitOpenFilteredStreamSetting(
+              stream,
+              this._filterQuery
+            );
+          }
+        })
+      );
     }
 
     // open browser, copy link
     {
-      menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(new MenuItem({ type: "separator" }));
 
-      menu.append(new MenuItem({
-        label: 'Open Browser',
-        click: ()=>{
-          shell.openExternal(issue.value.html_url);
-        }
-      }));
+      menu.append(
+        new MenuItem({
+          label: "Open Browser",
+          click: () => {
+            shell.openExternal(issue.value.html_url);
+          }
+        })
+      );
 
-      menu.append(new MenuItem({
-        label: 'Copy Link',
-        click: ()=>{
-          clipboard.writeText(issue.value.html_url);
-        }
-      }));
+      menu.append(
+        new MenuItem({
+          label: "Copy Link",
+          click: () => {
+            clipboard.writeText(issue.value.html_url);
+          }
+        })
+      );
     }
 
     menu.popup(remote.getCurrentWindow());
   }
 
   async _initHandleFilterQuery() {
-    const filterInput = ReactDOM.findDOMNode(this).querySelector('#filterInput');
-    filterInput.addEventListener('click', this._handleFilterQuery.bind(this));
-    filterInput.addEventListener('keydown', this._handleFilterQuery.bind(this));
-    filterInput.addEventListener('keyup', this._handleFilterQuery.bind(this));
-    document.body.addEventListener('click',()=>{
-      ReactDOM.findDOMNode(this).querySelector('#filterHistories').classList.add('hidden');
+    const filterInput = ReactDOM.findDOMNode(this).querySelector(
+      "#filterInput"
+    );
+    filterInput.addEventListener("click", this._handleFilterQuery.bind(this));
+    filterInput.addEventListener("keydown", this._handleFilterQuery.bind(this));
+    filterInput.addEventListener("keyup", this._handleFilterQuery.bind(this));
+    document.body.addEventListener("click", () => {
+      ReactDOM.findDOMNode(this)
+        .querySelector("#filterHistories")
+        .classList.add("hidden");
       if (!filterInput.value && this._filterQuery) {
-        this._filterQuery = '';
+        this._filterQuery = "";
         this._loadIssues();
       }
     });
 
-    ReactDOM.findDOMNode(this).querySelector('#filterHistories').classList.add('hidden');
+    ReactDOM.findDOMNode(this)
+      .querySelector("#filterHistories")
+      .classList.add("hidden");
     const rows = await FilterHistoryCenter.find(10);
-    const filters = rows.map((row)=> row.filter);
-    this.setState({filterHistories: filters});
+    const filters = rows.map(row => row.filter);
+    this.setState({ filterHistories: filters });
   }
 
   // hack: フィルター履歴のインタラクション、複雑すぎる。これ簡単にできるのだろうか
@@ -479,107 +573,131 @@ export default class IssuesComponent extends React.Component {
       this._pageNumber = 0;
       await FilterHistoryCenter.add(this._filterQuery);
       const rows = await FilterHistoryCenter.find(10);
-      const filters = rows.map((row)=> row.filter);
-      this.setState({filterHistories: filters});
-      ReactDOM.findDOMNode(this).querySelector('#filterHistories').classList.add('hidden');
+      const filters = rows.map(row => row.filter);
+      this.setState({ filterHistories: filters });
+      ReactDOM.findDOMNode(this)
+        .querySelector("#filterHistories")
+        .classList.add("hidden");
       this._loadIssues();
     }.bind(this);
 
     // move filter histories focus with direction
-    const moveFilterHistoriesFocus = (inputEl, direction)=>{
+    const moveFilterHistoriesFocus = (inputEl, direction) => {
       // 下キーを押した時に履歴が表示されていなければ、再スタートして処理を終了する
       if (direction === 1) {
-        const filterHistoriesEl = ReactDOM.findDOMNode(this).querySelector('#filterHistories');
-        if (filterHistoriesEl.classList.contains('hidden')) {
+        const filterHistoriesEl = ReactDOM.findDOMNode(this).querySelector(
+          "#filterHistories"
+        );
+        if (filterHistoriesEl.classList.contains("hidden")) {
           //filterHistoriesEl.classList.remove('hidden');
           start(inputEl);
           return;
         }
       }
 
-      const activeEl = ReactDOM.findDOMNode(this).querySelector('#filterHistories:not(.hidden) li.active');
+      const activeEl = ReactDOM.findDOMNode(this).querySelector(
+        "#filterHistories:not(.hidden) li.active"
+      );
       if (activeEl) {
         let el = activeEl;
-        while(el) {
-          el = direction === 1 ? el.nextElementSibling : el.previousElementSibling;
-          if (el && !el.classList.contains('hidden')) break;
+        while (el) {
+          el =
+            direction === 1 ? el.nextElementSibling : el.previousElementSibling;
+          if (el && !el.classList.contains("hidden")) break;
         }
 
         if (el) {
-          el.classList.add('active');
-          activeEl.classList.remove('active');
+          el.classList.add("active");
+          activeEl.classList.remove("active");
           inputEl.value = el.textContent;
         }
       } else {
-        const el = ReactDOM.findDOMNode(this).querySelector('#filterHistories:not(.hidden) li:not(.hidden)');
+        const el = ReactDOM.findDOMNode(this).querySelector(
+          "#filterHistories:not(.hidden) li:not(.hidden)"
+        );
         if (el) {
-          el.classList.add('active');
+          el.classList.add("active");
           inputEl.value = el.textContent;
         }
       }
     };
 
     // deactive current active history
-    const clearActive = ()=> {
-      const currentEl = ReactDOM.findDOMNode(this).querySelector('#filterHistories li.active');
-      if (currentEl) currentEl.classList.remove('active');
+    const clearActive = () => {
+      const currentEl = ReactDOM.findDOMNode(this).querySelector(
+        "#filterHistories li.active"
+      );
+      if (currentEl) currentEl.classList.remove("active");
     };
 
     // change filter history element visibility
-    const changeHistoryVisibility = (filterQuery) =>{
-      const filterHistoriesEl = ReactDOM.findDOMNode(this).querySelector('#filterHistories');
-      filterHistoriesEl.classList.remove('hidden');
+    const changeHistoryVisibility = filterQuery => {
+      const filterHistoriesEl = ReactDOM.findDOMNode(this).querySelector(
+        "#filterHistories"
+      );
+      filterHistoriesEl.classList.remove("hidden");
       const inputtingFilter = filterQuery;
-      const els = ReactDOM.findDOMNode(this).querySelectorAll('#filterHistories li');
+      const els = ReactDOM.findDOMNode(this).querySelectorAll(
+        "#filterHistories li"
+      );
       for (const el of Array.from(els)) {
         if (el.textContent.includes(inputtingFilter)) {
-          el.classList.remove('hidden');
+          el.classList.remove("hidden");
         } else {
-          el.classList.add('hidden');
-          el.classList.remove('active');
+          el.classList.add("hidden");
+          el.classList.remove("active");
         }
       }
     };
 
-    const start = async function(inputEl){
-      const filterHistoriesEl = ReactDOM.findDOMNode(this).querySelector('#filterHistories');
-      filterHistoriesEl.classList.remove('hidden');
+    const start = async function(inputEl) {
+      const filterHistoriesEl = ReactDOM.findDOMNode(this).querySelector(
+        "#filterHistories"
+      );
+      filterHistoriesEl.classList.remove("hidden");
 
-      const els = ReactDOM.findDOMNode(this).querySelectorAll('#filterHistories li');
-      for (const el of Array.from(els)) el.classList.remove('hidden');
+      const els = ReactDOM.findDOMNode(this).querySelectorAll(
+        "#filterHistories li"
+      );
+      for (const el of Array.from(els)) el.classList.remove("hidden");
 
-      filterHistoriesEl.onclick = (ev)=>{
+      filterHistoriesEl.onclick = ev => {
         loadIssues(ev.target.textContent);
         GA.eventIssueFilter();
       };
-      filterHistoriesEl.onmousemove = (ev) => {
+      filterHistoriesEl.onmousemove = ev => {
         if (ev.target === filterHistoriesEl) return;
 
-        const activeEl = filterHistoriesEl.querySelector('.active');
-        if (activeEl) activeEl.classList.remove('active');
-        ev.target.classList.add('active');
+        const activeEl = filterHistoriesEl.querySelector(".active");
+        if (activeEl) activeEl.classList.remove("active");
+        ev.target.classList.add("active");
         inputEl.value = ev.target.textContent;
       };
     }.bind(this);
 
-    if (ev.type === 'click') {
+    if (ev.type === "click") {
       start(ev.currentTarget);
       ev.stopPropagation(); // see this._initHandleFilterQuery() document.body
     }
 
-    if (ev.type === 'keydown') {
-      if (ev.keyCode === 13) { // enter
+    if (ev.type === "keydown") {
+      if (ev.keyCode === 13) {
+        // enter
         loadIssues(ev.currentTarget.value);
         GA.eventIssueFilter();
         return;
       }
 
-      if (ev.keyCode === 27) { // esc
-        ReactDOM.findDOMNode(this).querySelector('#filterHistories').classList.add('hidden');
+      if (ev.keyCode === 27) {
+        // esc
+        ReactDOM.findDOMNode(this)
+          .querySelector("#filterHistories")
+          .classList.add("hidden");
         return;
       }
 
-      if (ev.keyCode === 40 || ev.keyCode === 38) { // 40 = down, 38 = up
+      if (ev.keyCode === 40 || ev.keyCode === 38) {
+        // 40 = down, 38 = up
         ev.preventDefault();
         moveFilterHistoriesFocus(ev.currentTarget, ev.keyCode === 40 ? 1 : -1);
         return;
@@ -588,15 +706,21 @@ export default class IssuesComponent extends React.Component {
       clearActive();
     }
 
-    if (ev.type === 'keyup') {
-      if (ev.keyCode === 40 || ev.keyCode === 38 || ev.keyCode === 13 || ev.keyCode === 27) return;
+    if (ev.type === "keyup") {
+      if (
+        ev.keyCode === 40 ||
+        ev.keyCode === 38 ||
+        ev.keyCode === 13 ||
+        ev.keyCode === 27
+      )
+        return;
       changeHistoryVisibility(ev.currentTarget.value);
     }
   }
 
   _handleFilterClear() {
-    this._filterQuery = '';
-    ReactDOM.findDOMNode(this).querySelector('#filterInput').value = '';
+    this._filterQuery = "";
+    ReactDOM.findDOMNode(this).querySelector("#filterInput").value = "";
     this._loadIssues();
   }
 
@@ -606,19 +730,21 @@ export default class IssuesComponent extends React.Component {
   }
 
   async _execFilter(query) {
-    const el = ReactDOM.findDOMNode(this).querySelector('#filterInput');
-    if (!query) { // clear
-      el.value = '';
-    } else if (el.value) { // add or remove
+    const el = ReactDOM.findDOMNode(this).querySelector("#filterInput");
+    if (!query) {
+      // clear
+      el.value = "";
+    } else if (el.value) {
+      // add or remove
       let removed = false;
       if (el.value === query) {
-        el.value = '';
+        el.value = "";
         removed = true;
       } else {
-        const patterns = [`${query} `,` ${query}`];
+        const patterns = [`${query} `, ` ${query}`];
         for (const pattern of patterns) {
           if (el.value.includes(pattern)) {
-            el.value = el.value.replace(pattern, '');
+            el.value = el.value.replace(pattern, "");
             removed = true;
             break;
           }
@@ -626,7 +752,8 @@ export default class IssuesComponent extends React.Component {
       }
 
       if (!removed) el.value += ` ${query}`;
-    } else { // assign
+    } else {
+      // assign
       el.value = query;
     }
 
@@ -638,7 +765,7 @@ export default class IssuesComponent extends React.Component {
   async _handlePager(direction, toBottom = false) {
     if (direction > 0 && this._hasNextPage) {
       this._pageNumber++;
-    } else if(direction < 0 && this._pageNumber > 0){
+    } else if (direction < 0 && this._pageNumber > 0) {
       this._pageNumber--;
     } else {
       return false;
@@ -661,9 +788,9 @@ export default class IssuesComponent extends React.Component {
 
   _handleAvatar(result, evt) {
     const img = evt.target;
-    if (result === 'error') {
-      img.style.display = 'none';
-    } else if (result === 'success') {
+    if (result === "error") {
+      img.style.display = "none";
+    } else if (result === "success") {
       img.style.display = null;
     }
   }
@@ -671,26 +798,31 @@ export default class IssuesComponent extends React.Component {
   _handleFilterSameAs(key, value, evt) {
     evt.stopPropagation();
 
-    if (typeof value === 'string' && value.includes(' ')) value = `"${value}"`;
+    if (typeof value === "string" && value.includes(" ")) value = `"${value}"`;
     const queryPart = `${key}:${value}`;
 
     let query;
-    if (evt.metaKey || evt.ctrlKey) { // replace
+    if (evt.metaKey || evt.ctrlKey) {
+      // replace
       query = queryPart;
-    } else if (evt.shiftKey) { // remove
-      query = this._filterQuery.replace(new RegExp(` *${queryPart} *`, 'g'), '');
-    } else { // append
+    } else if (evt.shiftKey) {
+      // remove
+      query = this._filterQuery.replace(
+        new RegExp(` *${queryPart} *`, "g"),
+        ""
+      );
+    } else {
+      // append
       if (!this._filterQuery) {
         query = queryPart;
-      }
-      else if (this._filterQuery.match(new RegExp(` *${queryPart} *`))) {
+      } else if (this._filterQuery.match(new RegExp(` *${queryPart} *`))) {
         query = this._filterQuery;
       } else {
         query = `${this._filterQuery} ${queryPart}`;
       }
     }
 
-    ReactDOM.findDOMNode(this).querySelector('#filterInput').value = query;
+    ReactDOM.findDOMNode(this).querySelector("#filterInput").value = query;
     this._pageNumber = 0;
     this._filterQuery = query;
     this._loadIssues();
@@ -698,74 +830,118 @@ export default class IssuesComponent extends React.Component {
 
   render() {
     function typeIcon(issue) {
-      if (issue.type === 'issue') {
+      if (issue.type === "issue") {
         if (issue.closed_at === null) {
-          return '../image/icon_issue_open.svg';
+          return "../image/icon_issue_open.svg";
         } else {
-          return '../image/icon_issue_close.svg';
+          return "../image/icon_issue_close.svg";
         }
       } else {
         if (issue.closed_at === null) {
-          return '../image/icon_pr_open.svg';
+          return "../image/icon_pr_open.svg";
         } else {
-          return '../image/icon_pr_close.svg';
+          return "../image/icon_pr_close.svg";
         }
       }
     }
 
-    const issueNodes = this.state.issues.map((issue)=>{
+    const issueNodes = this.state.issues.map(issue => {
       const user = issue.user;
       const repo = issue.repo;
       const author = issue.value.user.avatar_url;
       const authorName = issue.value.user.login;
 
-      const active = this._currentIssueId === issue.id ? 'active' : '';
+      const active = this._currentIssueId === issue.id ? "active" : "";
       const isRead = IssueCenter.isRead(issue);
-      const read = isRead ? 'read-true' : 'read-false';
-      const updatedAt = moment(moment.utc(issue.updated_at).toDate()).format('YYYY-MM-DD HH:mm:ss');
+      const read = isRead ? "read-true" : "read-false";
+      const updatedAt = moment(moment.utc(issue.updated_at).toDate()).format(
+        "YYYY-MM-DD HH:mm:ss"
+      );
       const fromNow = moment(moment.utc(issue.updated_at)).fromNow();
 
-      const fadeIn = this.state.fadeInIssueIds.includes(issue.id) ? 'fade-in' : '';
+      const fadeIn = this.state.fadeInIssueIds.includes(issue.id)
+        ? "fade-in"
+        : "";
 
       // labels
-      const labelNodes = issue.value.labels.map((label)=>{
+      const labelNodes = issue.value.labels.map(label => {
         const style = {
           backgroundColor: `#${label.color}`,
           color: `#${Color.suitTextColor(label.color)}`
         };
-        return <span
-          key={label.id} style={style} title={label.name}
-          onClick={this._handleFilterSameAs.bind(this, 'label', label.name)}>{label.name}</span>;
+        return (
+          <span
+            key={label.id}
+            style={style}
+            title={label.name}
+            onClick={this._handleFilterSameAs.bind(this, "label", label.name)}
+          >
+            {label.name}
+          </span>
+        );
       });
 
       // milestone
       let milestoneNode = null;
       if (issue.value.milestone) {
-        milestoneNode = (<span className="milestone" onClick={this._handleFilterSameAs.bind(this, 'milestone', issue.value.milestone.title)}>
-          <span className="icon icon-flag"/><span>{issue.value.milestone.title}</span>
-        </span>);
+        milestoneNode = (
+          <span
+            className="milestone"
+            onClick={this._handleFilterSameAs.bind(
+              this,
+              "milestone",
+              issue.value.milestone.title
+            )}
+          >
+            <span className="icon icon-flag" />
+            <span>{issue.value.milestone.title}</span>
+          </span>
+        );
       }
 
       // comment
       const commentsNode = (
-        <span onClick={this._handleFilterSameAs.bind(this, 'is', isRead ? 'read' : 'unread')}>
-          <span className="icon icon-chat"/><span>{issue.value.comments}</span>
-        </span>);
+        <span
+          onClick={this._handleFilterSameAs.bind(
+            this,
+            "is",
+            isRead ? "read" : "unread"
+          )}
+        >
+          <span className="icon icon-chat" />
+          <span>{issue.value.comments}</span>
+        </span>
+      );
 
       // assignees
-      const assigneeNodes = issue.value.assignees.map((assignee)=>{
-        return <img key={assignee.login} title={assignee.login} src={assignee.avatar_url}
-                    onClick={this._handleFilterSameAs.bind(this, 'assignee', assignee.login)}/>
+      const assigneeNodes = issue.value.assignees.map(assignee => {
+        return (
+          <img
+            key={assignee.login}
+            title={assignee.login}
+            src={assignee.avatar_url}
+            onClick={this._handleFilterSameAs.bind(
+              this,
+              "assignee",
+              assignee.login
+            )}
+          />
+        );
       });
 
       return (
-        <li key={issue.id}
-                 className={`issue-list-item list-group-item ${read} ${active} ${fadeIn}`}
-                 onClick={this._handleClick.bind(this, issue)}
-                 onContextMenu={this._handleContextMenu.bind(this, issue)}>
-
+        <li
+          key={issue.id}
+          className={`issue-list-item list-group-item ${read} ${active} ${fadeIn}`}
+          onClick={this._handleClick.bind(this, issue)}
+          onContextMenu={this._handleContextMenu.bind(this, issue)}
+        >
           <div className="body">
-            <img className="state" src={typeIcon(issue)} onClick={this._handleFilterSameAs.bind(this, 'is', issue.type)}/>
+            <img
+              className="state"
+              src={typeIcon(issue)}
+              onClick={this._handleFilterSameAs.bind(this, "is", issue.type)}
+            />
             <span>{issue.title}</span>
           </div>
 
@@ -775,28 +951,58 @@ export default class IssuesComponent extends React.Component {
           </div>
 
           <div className="footer">
-            <div className="user" onError={this._handleAvatar.bind(this, 'error')} onLoad={this._handleAvatar.bind(this, 'success')}>
-              <img title={authorName} src={author} onClick={this._handleFilterSameAs.bind(this, 'author', authorName)}/>
-              {issue.value.assignees.length ? ' → ' : ''}
+            <div
+              className="user"
+              onError={this._handleAvatar.bind(this, "error")}
+              onLoad={this._handleAvatar.bind(this, "success")}
+            >
+              <img
+                title={authorName}
+                src={author}
+                onClick={this._handleFilterSameAs.bind(
+                  this,
+                  "author",
+                  authorName
+                )}
+              />
+              {issue.value.assignees.length ? " → " : ""}
               {assigneeNodes}
             </div>
 
             <div className="repo" title={repo}>
-              <span onClick={this._handleFilterSameAs.bind(this, 'user', user)}>{user}</span>
+              <span onClick={this._handleFilterSameAs.bind(this, "user", user)}>
+                {user}
+              </span>
               /
-              <span onClick={this._handleFilterSameAs.bind(this, 'repo', repo)}>{repo.split('/')[1]}</span>
+              <span onClick={this._handleFilterSameAs.bind(this, "repo", repo)}>
+                {repo.split("/")[1]}
+              </span>
             </div>
 
-            <div className="number" onClick={this._handleFilterSameAs.bind(this, 'number', issue.number)}>#{issue.number}</div>
+            <div
+              className="number"
+              onClick={this._handleFilterSameAs.bind(
+                this,
+                "number",
+                issue.number
+              )}
+            >
+              #{issue.number}
+            </div>
 
-            <div className="comment-count" title={`${fromNow} (${updatedAt})`}>{commentsNode}</div>
+            <div className="comment-count" title={`${fromNow} (${updatedAt})`}>
+              {commentsNode}
+            </div>
             <div>
-              <span className={`icon ${issue.marked_at ? 'icon-star' : 'icon-star-empty'}`}
-                    onClick={this._markIssue.bind(this, issue)}/>
+              <span
+                className={`icon ${
+                  issue.marked_at ? "icon-star" : "icon-star-empty"
+                }`}
+                onClick={this._markIssue.bind(this, issue)}
+              />
             </div>
           </div>
-
-      </li>
+        </li>
       );
     });
 
@@ -805,93 +1011,127 @@ export default class IssuesComponent extends React.Component {
     if (waitForLoadingCount === 0) {
       waitForLoadingCountNode = null;
     } else {
-      waitForLoadingCountNode = <li className="wait-for-loading-count" onClick={this._handleWaitForLoadingCount.bind(this)}>
-        {waitForLoadingCount} issues were updated
-      </li>
+      waitForLoadingCountNode = (
+        <li
+          className="wait-for-loading-count"
+          onClick={this._handleWaitForLoadingCount.bind(this)}
+        >
+          {waitForLoadingCount} issues were updated
+        </li>
+      );
     }
 
     // filter histories
-    const filterHistoryNodes = this.state.filterHistories.map((filter)=>{
+    const filterHistoryNodes = this.state.filterHistories.map(filter => {
       return <li key={filter}>{filter}</li>;
     });
 
-    const pager = this._totalCount === 0 ? 'none' : 'block';
-    const leftPager = this._pageNumber === 0 ? 'deactive' : 'active';
-    const rightPager = this._hasNextPage === true ? 'active' : 'deactive';
+    const pager = this._totalCount === 0 ? "none" : "block";
+    const leftPager = this._pageNumber === 0 ? "deactive" : "active";
+    const rightPager = this._hasNextPage === true ? "active" : "deactive";
 
-    return <div className="issues">
-      <div className="progress-bar" id="issuesProgress" style={{display: 'none'}}><span></span></div>
-      <ul className="list-group" id="issuesList">
-        <li className="list-group-header">
-          <input id="filterInput" className="form-control filter-input" type="text" placeholder="is:open octocat" />
-          <span className="icon icon-cancel-circled filter-clear-icon" onClick={this._handleFilterClear.bind(this)}/>
-        </li>
+    return (
+      <div className="issues">
+        <div
+          className="progress-bar"
+          id="issuesProgress"
+          style={{ display: "none" }}
+        >
+          <span />
+        </div>
+        <ul className="list-group" id="issuesList">
+          <li className="list-group-header">
+            <input
+              id="filterInput"
+              className="form-control filter-input"
+              type="text"
+              placeholder="is:open octocat"
+            />
+            <span
+              className="icon icon-cancel-circled filter-clear-icon"
+              onClick={this._handleFilterClear.bind(this)}
+            />
+          </li>
 
-        <li className="filter-selection">
-          <select onChange={this._handleFilterSelection.bind(this)} value={this._filterSelection}>
-            <option value="updated">Sort by updated at</option>
-            <option value="read">Sort by read at</option>
-            <option value="created">Sort by created at</option>
-            <option value="closed">Sort by closed at</option>
-            <option value="dueon">Sort by due on</option>
-          </select>
-        </li>
+          <li className="filter-selection">
+            <select
+              onChange={this._handleFilterSelection.bind(this)}
+              value={this._filterSelection}
+            >
+              <option value="updated">Sort by updated at</option>
+              <option value="read">Sort by read at</option>
+              <option value="created">Sort by created at</option>
+              <option value="closed">Sort by closed at</option>
+              <option value="dueon">Sort by due on</option>
+            </select>
+          </li>
 
-        {waitForLoadingCountNode}
-        {issueNodes}
+          {waitForLoadingCountNode}
+          {issueNodes}
 
-        <li className="list-group pager" style={{display: pager}}>
-          <button className={`btn btn-default ${leftPager}`} onClick={this._handlePager.bind(this, -1, false)}>
-            <span className="icon icon-left-open"/>
-          </button>
-          <button className={`btn btn-default ${rightPager}`} onClick={this._handlePager.bind(this, 1, false)}>
-            <span className="icon icon-right-open"/>
-          </button>
-        </li>
-      </ul>
+          <li className="list-group pager" style={{ display: pager }}>
+            <button
+              className={`btn btn-default ${leftPager}`}
+              onClick={this._handlePager.bind(this, -1, false)}
+            >
+              <span className="icon icon-left-open" />
+            </button>
+            <button
+              className={`btn btn-default ${rightPager}`}
+              onClick={this._handlePager.bind(this, 1, false)}
+            >
+              <span className="icon icon-right-open" />
+            </button>
+          </li>
+        </ul>
 
-      <ul className="filter-histories" id="filterHistories">{filterHistoryNodes}</ul>
-    </div>;
+        <ul className="filter-histories" id="filterHistories">
+          {filterHistoryNodes}
+        </ul>
+      </div>
+    );
   }
 
   _handleCommand(commandItem) {
     const command = commandItem.command;
     switch (command) {
-      case 'load':
+      case "load":
         this._loadIssues();
         break;
-      case 'next':
+      case "next":
         this._handleViKey(1);
         break;
-      case 'prev':
+      case "prev":
         this._handleViKey(-1);
         break;
-      case 'next_with_skip':
+      case "next_with_skip":
         this._handleViKey(1, true);
         break;
-      case 'prev_with_skip':
+      case "prev_with_skip":
         this._handleViKey(-1, true);
         break;
-      case 'focus_filter':
-        ReactDOM.findDOMNode(this).querySelector('#filterInput').focus();
+      case "focus_filter":
+        ReactDOM.findDOMNode(this)
+          .querySelector("#filterInput")
+          .focus();
         break;
-      case 'filter_unread':
-        this._execFilter('is:unread');
+      case "filter_unread":
+        this._execFilter("is:unread");
         break;
-      case 'filter_open':
-        this._execFilter('is:open');
+      case "filter_open":
+        this._execFilter("is:open");
         break;
-      case 'filter_mark':
-        this._execFilter('is:star');
+      case "filter_mark":
+        this._execFilter("is:star");
         break;
-      case 'filter_author':
+      case "filter_author":
         this._execFilter(`author:${Config.loginName}`);
         break;
-      case 'filter_assignee':
+      case "filter_assignee":
         this._execFilter(`assignee:${Config.loginName}`);
         break;
-      case 'filter_clear':
-        this._execFilter('');
+      case "filter_clear":
+        this._execFilter("");
         break;
     }
   }
